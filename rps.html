@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<title>石头剪刀布</title>
+<style>
+:root{--bg:#f4f5f9;--card:#fff;--text:#1f2430;--sub:#7b8190;--accent:#4f46e5;--soft:#eef2ff;--line:#ebedf2;--shadow:0 1px 3px rgba(20,20,40,.06),0 6px 18px rgba(20,20,40,.05);--green:#15a86b;--red:#e23b3b;}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"PingFang SC","Microsoft YaHei",sans-serif;background:var(--bg);color:var(--text);line-height:1.6;-webkit-font-smoothing:antialiased}
+.wrap{max-width:480px;margin:0 auto;padding:22px 16px 60px}
+.bar{display:flex;align-items:center;gap:10px}
+.bar a{color:var(--sub);text-decoration:none;font-size:14px}
+h1{font-size:20px}.sub{color:var(--sub);font-size:13px;margin-top:2px}
+.card{background:var(--card);border-radius:16px;padding:18px;box-shadow:var(--shadow);margin-top:16px}
+.arena{display:flex;justify-content:space-between;align-items:center;gap:10px;margin:10px 0}
+.side{flex:1;text-align:center}
+.side .pick{font-size:60px;height:80px;display:flex;align-items:center;justify-content:center}
+.side .who{color:var(--sub);font-size:13px}
+.vs{font-weight:800;color:var(--accent);font-size:18px}
+.result{text-align:center;font-size:18px;font-weight:800;min-height:28px;margin:6px 0}
+.result.w{color:var(--green)}.result.l{color:var(--red)}.result.d{color:var(--sub)}
+.hands{display:flex;justify-content:space-around;gap:10px;margin-top:10px}
+.hand{flex:1;background:var(--soft);border:0;border-radius:14px;padding:14px 0;font-size:34px;cursor:pointer;transition:transform .08s}
+.hand:active{transform:scale(.93)}
+.shake{animation:sk .4s}
+@keyframes sk{0%,100%{transform:translateY(0)}25%{transform:translateY(-8px)}75%{transform:translateY(8px)}}
+.score{display:flex;justify-content:space-around;text-align:center;margin-top:14px}
+.score b{font-size:20px;display:block}.score span{color:var(--sub);font-size:12px}
+.btn{margin-top:14px;width:100%;border:0;background:var(--accent);color:#fff;font-weight:700;font-size:14px;padding:11px;border-radius:10px;cursor:pointer}
+.seg{display:inline-flex;background:var(--soft);border-radius:10px;padding:3px;gap:3px;margin-top:10px}
+.seg button{border:0;background:transparent;color:var(--sub);font-weight:600;font-size:13px;padding:6px 12px;border-radius:8px;cursor:pointer}
+.seg button.on{background:#fff;color:var(--accent);box-shadow:0 1px 2px rgba(20,20,40,.1)}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="bar"><a href="index.html">← 游戏厅</a></div>
+  <h1>✊ 石头剪刀布</h1>
+  <p class="sub">出拳跟 AI 比，看谁更懂你。</p>
+
+  <div class="card">
+    <div class="seg" id="mode">
+      <button data-m="random" class="on">随机 AI</button>
+      <button data-m="smart">读心 AI</button>
+    </div>
+    <div class="arena">
+      <div class="side"><div class="who">你</div><div class="pick" id="you">🤜</div></div>
+      <div class="vs">VS</div>
+      <div class="side"><div class="who">AI</div><div class="pick" id="ai">🤖</div></div>
+    </div>
+    <div class="result" id="result">出拳吧</div>
+    <div class="hands">
+      <button class="hand" data-h="rock">✊</button>
+      <button class="hand" data-h="paper">✋</button>
+      <button class="hand" data-h="scissors">✌️</button>
+    </div>
+    <div class="score">
+      <div><b id="sw">0</b><span>胜</span></div>
+      <div><b id="sd">0</b><span>平</span></div>
+      <div><b id="sl">0</b><span>负</span></div>
+      <div><b id="streak">0</b><span>连胜</span></div>
+    </div>
+    <button class="btn" id="reset">清空战绩</button>
+  </div>
+</div>
+<script>
+const MAP={rock:'✊',paper:'✋',scissors:'✌️'};
+const BEAT={rock:'scissors',paper:'rock',scissors:'paper'};
+const KEY={rock:'rock',paper:'paper',scissors:'scissors'};
+let mode='random',sc={w:0,d:0,l:0,streak:0};
+const hist=[];
+const you=document.getElementById('you'),ai=document.getElementById('ai'),res=document.getElementById('result');
+document.getElementById('mode').onclick=e=>{
+  const b=e.target.closest('button');if(!b)return;
+  mode=b.dataset.m;[...e.currentTarget.children].forEach(x=>x.classList.toggle('on',x===b));
+};
+document.querySelectorAll('.hand').forEach(b=>b.onclick=()=>play(b.dataset.h));
+document.getElementById('reset').onclick=()=>{sc={w:0,d:0,l:0,streak:0};hist.length=0;update();res.textContent='已清空';res.className='result';};
+
+function aiPick(){
+  if(mode==='random') return ['rock','paper','scissors'][Math.floor(Math.random()*3)];
+  if(hist.length<2) return ['rock','paper','scissors'][Math.floor(Math.random()*3)];
+  // 统计你最近出拳，预测你"下一步"最常出的，出克制它的
+  const cnt={rock:0,paper:0,scissors:0};
+  hist.slice(-5).forEach(h=>cnt[h.you]++);
+  let pred='rock',mx=-1;for(const k in cnt){if(cnt[k]>mx){mx=cnt[k];pred=k;}}
+  return BEAT[pred]; // 出克制你预测的拳
+}
+function play(youH){
+  const a=aiPick();
+  you.textContent=MAP[youH];ai.textContent=MAP[a];
+  you.classList.add('shake');ai.classList.add('shake');
+  setTimeout(()=>{you.classList.remove('shake');ai.classList.remove('shake');},400);
+  hist.push({you:youH,ai:a});
+  let r;
+  if(youH===a){r='d';}
+  else if(BEAT[youH]===a){r='w';}
+  else{r='l';}
+  if(r==='w'){sc.w++;sc.streak++;res.textContent='你赢了！';res.className='result w';}
+  else if(r==='l'){sc.l++;sc.streak=0;res.textContent='AI 赢了';res.className='result l';}
+  else{sc.d++;sc.streak=0;res.textContent='平局';res.className='result d';}
+  update();
+}
+function update(){
+  document.getElementById('sw').textContent=sc.w;
+  document.getElementById('sd').textContent=sc.d;
+  document.getElementById('sl').textContent=sc.l;
+  document.getElementById('streak').textContent=sc.streak;
+}
+</script>
+</body></html>

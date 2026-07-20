@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<title>数织 · Nonogram</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"PingFang SC","Microsoft YaHei",sans-serif;background:#eef0f6;color:#1f2430;display:flex;flex-direction:column;align-items:center;min-height:100vh;-webkit-font-smoothing:antialiased}
+h1{font-size:20px;margin-top:16px}
+.bar{display:flex;gap:8px;margin:12px 0;flex-wrap:wrap;justify-content:center}
+button{font:inherit;font-size:14px;font-weight:700;border:none;border-radius:10px;padding:9px 14px;background:#4f46e5;color:#fff;cursor:pointer}
+button.sec{background:#fff;color:#4f46e5;box-shadow:0 1px 3px rgba(0,0,0,.08)}
+.stage{background:#fff;border-radius:16px;padding:12px;box-shadow:0 8px 22px rgba(20,20,40,.08);overflow:auto;max-width:96vw}
+table{border-collapse:collapse;margin:0 auto}
+td{width:30px;height:30px;text-align:center;font-size:11px;color:#7b8190;user-select:none}
+td.hint{font-weight:700}
+td.cell{border:1px solid #dfe3ea;background:#f6f8fb;cursor:pointer;font-size:16px;padding:0}
+td.cell.on{background:#1f2430}
+td.cell.err{background:#fdeaea}
+td.cell.mark{color:#9aa0ad}
+td.clabel{font-weight:700;color:#1f2430;background:#fff}
+.info{margin:10px 0 4px;color:#7b8190;font-size:13px;text-align:center}
+.hint{color:#9aa0ad;font-size:12px;margin-bottom:18px;text-align:center}
+</style>
+</head>
+<body>
+<h1>🔢 数织 Nonogram</h1>
+<div class="bar">
+  <button class="sec" id="prev">◀ 上一关</button>
+  <span id="lv" style="align-self:center;font-weight:800"></span>
+  <button class="sec" id="next">下一关 ▶</button>
+  <button class="sec" id="reset">↻ 重玩</button>
+</div>
+<div class="stage"><div id="wrap"></div></div>
+<div class="info" id="info"></div>
+<div class="hint">点格子循环：填 ⬛ → 标记 ❌ → 空。按行列数字提示涂出图案。填错会标红。</div>
+
+<script>
+const PUZZLES=[
+{name:"钻石",g:[
+"..#..",
+".###.",
+"#####",
+".###.",
+"..#.."]},
+{name:"爱心",g:[
+".#.#.",
+"#####",
+"#####",
+".###.",
+"..#.."]},
+{name:"房子",g:[
+"..#..",
+".###.",
+"#####",
+"#.#.#",
+"#.#.#",
+"#####"]},
+{name:"猫脸",g:[
+"#....#.#..#",
+"#.##.#.##.#",
+"#.######.#.",
+"#.#.####.#.",
+"###.####.###",
+"#.######.#.",
+"#.#....#.#.",
+"#.#.##.#.#.",
+"..#....#..",
+"..#.##.#.."]}
+];
+let pi=0, sol, state, done;
+const wrap=document.getElementById('wrap');
+const info=document.getElementById('info');
+
+function parsePuzzle(p){
+  const g=p.g.map(r=>r.split('').map(ch=>ch==='#'?1:0));
+  const rows=g.length, cols=g[0].length;
+  const rh=g.map(row=>{const out=[];let n=0;for(const v of row){if(v){n++;}else if(n){out.push(n);n=0;}}if(n)out.push(n);return out.length?out:[0];});
+  const ch=[];for(let c=0;c<cols;c++){const out=[];let n=0;for(let r=0;r<rows;r++){if(g[r][c]){n++;}else if(n){out.push(n);n=0;}}if(n)out.push(n);ch.push(out.length?out:[0]);}
+  return {g,rows,cols,rh,ch};
+}
+function load(n){
+  pi=(n+PUZZLES.length)%PUZZLES.length;
+  const p=PUZZLES[pi];
+  const parsed=parsePuzzle(p);
+  sol=parsed.g;state=parsed.g.map(r=>r.map(()=>0));done=false;
+  document.getElementById('lv').textContent=p.name+' · '+parsed.rows+'×'+parsed.cols;
+  render(parsed);info.textContent='按提示涂色，填满所有黑块即过关。';
+}
+function render(P){
+  P=P||parsePuzzle(PUZZLES[pi]);
+  const {rows,cols,rh,ch}=P;
+  let html='<table>';
+  // 顶部列提示
+  const maxCh=Math.max(...ch.map(a=>a.length));
+  html+='<tr><td class="hint"></td>';
+  for(let c=0;c<cols;c++)html+='<td class="hint clabel" rowspan="1"></td>';
+  html+='</tr>';
+  // 用 div 方式更可控：改为上、左 hint 区 + 网格
+  wrap.innerHTML=buildTable(P);
+}
+function buildTable(P){
+  const {rows,cols,rh,ch}=P;
+  const maxCh=Math.max(...ch.map(a=>a.length));
+  const maxRh=Math.max(...rh.map(a=>a.length));
+  let h='<table>';
+  // 列提示行（顶部）
+  for(let i=0;i<maxCh;i++){
+    h+='<tr>';
+    h+='<td class="hint"></td>'; // 左上角空白
+    for(let c=0;c<cols;c++){
+      const arr=ch[c];
+      const v=arr[arr.length-1-i];
+      h+='<td class="hint clabel">'+(v!==undefined?v:'')+'</td>';
+    }
+    h+='</tr>';
+  }
+  // 主体：每行 = 行提示 + 格子
+  for(let r=0;r<rows;r++){
+    h+='<tr>';
+    const arr=rh[r];
+    for(let i=0;i<maxRh;i++){
+      const v=arr[arr.length-1-i];
+      h+='<td class="hint">'+(v!==undefined?v:'')+'</td>';
+    }
+    for(let c=0;c<cols;c++){
+      const st=state[r][c];
+      let cls='cell';
+      if(st===1)cls+=' on';
+      else if(st===2)cls+=' mark';
+      // 填错提示：填了但答案不是1
+      if(st===1&&sol[r][c]!==1)cls+=' err';
+      h+='<td class="'+cls+'" data-r="'+r+'" data-c="'+c+'">'+(st===2?'❌':(st===1?'':''))+'</td>';
+    }
+    h+='</tr>';
+  }
+  h+='</table>';
+  return h;
+}
+wrap.addEventListener('click',e=>{
+  const td=e.target.closest('td.cell');if(!td||done)return;
+  const r=+td.dataset.r,c=+td.dataset.c;
+  state[r][c]=(state[r][c]+1)%3;
+  refreshCell(r,c);check();
+});
+function refreshCell(r,c){
+  const P=parsePuzzle(PUZZLES[pi]);
+  const td=wrap.querySelector('td.cell[data-r="'+r+'"][data-c="'+c+'"]');
+  const st=state[r][c];
+  let cls='cell';
+  if(st===1)cls+=' on';else if(st===2)cls+=' mark';
+  if(st===1&&sol[r][c]!==1)cls+=' err';
+  td.className=cls;td.textContent=st===2?'❌':'';
+}
+function check(){
+  for(let r=0;r<sol.length;r++)for(let c=0;c<sol[0].length;c++){
+    if((state[r][c]===1)!==(sol[r][c]===1))return; // 未完全匹配
+  }
+  done=true;info.textContent='🎉 完成！图案正确。点「下一关」继续。';
+}
+document.getElementById('prev').onclick=()=>load(pi-1);
+document.getElementById('next').onclick=()=>load(pi+1);
+document.getElementById('reset').onclick=()=>load(pi);
+load(0);
+</script>
+</body></html>

@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<title>泡泡龙</title>
+<style>
+:root{--bg:#eef0f6;--card:#fff;--text:#1f2430;--sub:#7b8190;--accent:#4f46e5;--line:#d9dde6;--shadow:0 1px 3px rgba(20,20,40,.06),0 8px 22px rgba(20,20,40,.06);}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"PingFang SC","Microsoft YaHei",sans-serif;background:var(--bg);color:var(--text);min-height:100vh;display:flex;flex-direction:column;align-items:center}
+.bar{width:100%;max-width:560px;padding:10px 14px;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid var(--line);background:var(--card)}
+.bar a{color:var(--accent);text-decoration:none;font-weight:700;font-size:14px}
+.bar b{font-size:16px}
+.wrap{width:100%;max-width:560px;padding:14px}
+canvas{width:100%;background:var(--card);border-radius:14px;box-shadow:var(--shadow);display:block;touch-action:none}
+.meta{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;font-size:14px;color:var(--sub)}
+.meta b{color:var(--text);font-size:18px}
+.btn{background:var(--accent);color:#fff;border:none;border-radius:10px;padding:9px 18px;font-weight:700;font-size:14px;cursor:pointer}
+.hint{text-align:center;color:var(--sub);font-size:13px;margin-top:10px}
+#next{display:flex;align-items:center;gap:8px}
+</style>
+</head>
+<body>
+<div class="bar"><a href="index.html">← 游戏厅</a><b>泡泡龙</b><b>剩余 <span id="left">0</span></b></div>
+<div class="wrap">
+  <div class="meta"><span id="next">下一发 <b id="nextc" style="display:inline-block;width:18px;height:18px;border-radius:50%;background:#999"></b></span><button class="btn" id="start">新游戏</button></div>
+  <canvas id="cv" width="560" height="470"></canvas>
+  <p class="hint">瞄准并点击 / 点屏发射，三颗同色相连即消除。清空全部泡泡获胜。</p>
+</div>
+<script>
+const cv=document.getElementById('cv'),ctx=cv.getContext('2d');
+const W=cv.width,H=cv.height,R=18,RH=R*1.732,COLS=15,SX=10; // side margin
+const COLORS=['#e23b3b','#f59e0b','#4f46e5','#15a86b','#1f9bd6'];
+let grid,cur,next,shx,shy,ball,aim,raf,running,cols;
+function rowLen(r){return r%2===0?COLS:COLS-1;}
+function cx(r,c){return SX+R+(r%2===0?0:R)+c*2*R;}
+function cy(r){return R+r*RH;}
+function neighbors(r,c){const e=r%2===0;
+  return e?[[r,c-1],[r,c+1],[r-1,c-1],[r-1,c],[r+1,c-1],[r+1,c]]:[[r,c-1],[r,c+1],[r-1,c],[r-1,c+1],[r+1,c],[r+1,c+1]];}
+function newGame(){grid=[];for(let r=0;r<14;r++){grid[r]=[];for(let c=0;c<rowLen(r);c++){grid[r][c]=r<5?(Math.floor(Math.random()*COLORS.length)):-1;}}cols=5;
+  shy=H-34;shx=W/2;cur=rnd();next=rnd();ball=null;aim=Math.PI/2;running=true;updateLeft();draw();}
+function rnd(){return Math.floor(Math.random()*COLORS.length);}
+function updateLeft(){let n=0;for(const row of grid)for(const v of row)if(v>=0)n++;document.getElementById('left').textContent=n;document.getElementById('nextc').style.background=COLORS[next];}
+function draw(){ctx.clearRect(0,0,W,H);
+  for(let r=0;r<grid.length;r++)for(let c=0;c<grid[r].length;c++){const v=grid[r][c];if(v>=0){bubble(cx(r,c),cy(r),COLORS[v]);}}
+  // shooter base
+  ctx.fillStyle='#cfd5e0';ctx.beginPath();ctx.arc(shx,shy,R+4,0,7);ctx.fill();
+  bubble(shx,shy,COLORS[cur]);
+  // aim guide
+  if(!ball&&running){ctx.strokeStyle='rgba(79,70,229,.4)';ctx.setLineDash([5,5]);ctx.beginPath();ctx.moveTo(shx,shy);let ax=shx+Math.cos(aim)*200,ay=shy-Math.sin(aim)*200;ctx.lineTo(ax,ay);ctx.stroke();ctx.setLineDash([]);}
+  if(ball){bubble(ball.x,ball.y,COLORS[ball.c]);}
+}
+function bubble(x,y,col){ctx.fillStyle=col;ctx.beginPath();ctx.arc(x,y,R-1,0,7);ctx.fill();ctx.fillStyle='rgba(255,255,255,.35)';ctx.beginPath();ctx.arc(x-5,y-5,R*0.32,0,7);ctx.fill();}
+function shoot(){if(ball||!running)return;ball={x:shx,y:shy,c:cur,speed:8,dx:Math.cos(aim),dy:-Math.sin(aim)};cur=next;next=rnd();updateLeft();loop();}
+function loop(){if(!ball){draw();return;}raf=requestAnimationFrame(loop);
+  for(let s=0;s<2;s++){ball.x+=ball.dx*ball.speed/2;ball.y+=ball.dy*ball.speed/2;
+    if(ball.x<R+SX){ball.x=R+SX;ball.dx*=-1;}if(ball.x>W-R-SX){ball.x=W-R-SX;ball.dx*=-1;}
+    if(collide()){place();return;}}
+  draw();
+}
+function collide(){if(ball.y<=R+SX)return true;for(let r=0;r<grid.length;r++)for(let c=0;c<grid[r].length;c++){if(grid[r][c]>=0){const dx=ball.x-cx(r,c),dy=ball.y-cy(r,c);if(dx*dx+dy*dy<(2*R-4)*(2*R-4))return true;}}return false;}
+function place(){let best=null,bd=1e9;for(let r=0;r<grid.length;r++)for(let c=0;c<grid[r].length;c++){if(grid[r][c]>=0)continue;const dx=ball.x-cx(r,c),dy=ball.y-cy(r,c),d=dx*dx+dy*dy;if(d<bd){bd=d;best=[r,c];}}
+  if(!best){running=false;return;}const[r,c]=best;grid[r][c]=ball.c;ball=null;
+  const grp=group(r,c,grid[r][c]);if(grp.length>=3){for(const[gr,gc]of grp)grid[gr][gc]=-1;dropFloat();}
+  if(loseChk()){over('你输了');return;}if(winChk()){over('通关！');return;}
+  updateLeft();draw();
+}
+function group(r,c,col){const seen=new Set(),st=[[r,c]],out=[];while(st.length){const[cr,cc]=st.pop();const key=cr+','+cc;if(seen.has(key))continue;seen.add(key);if(cr<0||cr>=grid.length||cc<0||cc>=grid[cr].length)continue;if(grid[cr][cc]!==col)continue;out.push([cr,cc]);for(const[nr,nc]of neighbors(cr,cc))st.push([nr,nc]);}return out;}
+function dropFloat(){const seen=new Set(),st=[];for(let c=0;c<grid[0].length;c++)if(grid[0][c]>=0)st.push([0,c]);
+  while(st.length){const[cr,cc]=st.pop();const k=cr+','+cc;if(seen.has(k))continue;seen.add(k);for(const[nr,nc]of neighbors(cr,cc)){if(nr>=0&&nr<grid.length&&nc>=0&&nc<grid[nr].length&&grid[nr][nc]>=0&&!seen.has(nr+','+nc))st.push([nr,nc]);}}
+  for(let r=0;r<grid.length;r++)for(let c=0;c<grid[r].length;c++)if(grid[r][c]>=0&&!seen.has(r+','+c))grid[r][c]=-1;}
+function loseChk(){for(let r=0;r<grid.length;r++)for(let c=0;c<grid[r].length;c++)if(grid[r][c]>=0&&cy(r)>=shy-R-6)return true;return false;}
+function winChk(){for(const row of grid)for(const v of row)if(v>=0)return false;return true;}
+function over(t){running=false;draw();ctx.fillStyle='#1f2430';ctx.font='bold 22px sans-serif';ctx.textAlign='center';ctx.fillText(t,W/2,H/2);}
+function aimAt(x,y){let a=Math.atan2(shy-y,x-shx);if(a<0.18)a=0.18;if(a>Math.PI-0.18)a=Math.PI-0.18;aim=a;}
+cv.addEventListener('pointermove',e=>{const r=cv.getBoundingClientRect();aimAt((e.clientX-r.left)*(W/r.width),(e.clientY-r.top)*(H/r.height));if(!ball)draw();});
+cv.addEventListener('pointerdown',e=>{const r=cv.getBoundingClientRect();aimAt((e.clientX-r.left)*(W/r.width),(e.clientY-r.top)*(H/r.height));if(!ball)shoot();});
+document.getElementById('start').onclick=()=>{cancelAnimationFrame(raf);newGame();};
+newGame();
+</script>
+</body></html>

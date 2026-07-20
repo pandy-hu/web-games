@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1,user-scalable=no">
+<title>2048</title>
+<style>
+:root{--bg:#f4f5f9;--card:#fff;--text:#1f2430;--sub:#7b8190;--accent:#4f46e5;--soft:#eef2ff;--line:#ebedf2;--shadow:0 1px 3px rgba(20,20,40,.06),0 6px 18px rgba(20,20,40,.05);}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"PingFang SC","Microsoft YaHei",sans-serif;background:var(--bg);color:var(--text);-webkit-font-smoothing:antialiased}
+.wrap{max-width:460px;margin:0 auto;padding:18px 16px 40px}
+h1{font-size:20px}
+.back{display:inline-flex;align-items:center;gap:4px;color:var(--sub);text-decoration:none;font-size:13px;margin-bottom:8px}
+.card{background:#bbada0;border-radius:14px;padding:14px;margin-top:14px}
+.bar{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}
+.score b{font-size:22px;color:#fff}
+.btn{background:#8f7a66;color:#fff;border:none;border-radius:10px;padding:10px 16px;font-size:15px;cursor:pointer}
+.board{position:relative;width:100%;aspect-ratio:1/1;background:#bbada0;border-radius:10px;touch-action:none}
+.cell{position:absolute;background:#cdc1b4;border-radius:8px;display:flex;align-items:center;justify-content:center;font-weight:800;transition:all .12s}
+.over{position:absolute;inset:0;background:rgba(255,255,255,.65);border-radius:10px;display:none;flex-direction:column;align-items:center;justify-content:center;font-size:22px;font-weight:800;color:#776e65;z-index:5}
+.over.show{display:flex}
+.hint{font-size:12px;color:#7b8190;margin-top:10px}
+</style>
+</head>
+<body>
+<div class="wrap">
+<a class="back" href="index.html">← 返回分类表</a>
+<h1>🔢 2048</h1>
+<div class="card">
+  <div class="bar"><div class="score">分数 <b id="sc">0</b></div><button class="btn" id="restart">重新开始</button></div>
+  <div class="board" id="board"><div class="over" id="over">游戏结束<button class="btn" id="again" style="margin-top:10px">再来一局</button></div></div>
+  <p class="hint">方向键 / WASD 或滑动。相同数字合并，凑出 2048。</p>
+</div>
+</div>
+<script>
+const board=document.getElementById('board');
+let grid, score=0, over=false;
+const SIZE=4, GAP=10, COLORS={2:'#eee4da',4:'#ede0c8',8:'#f2b179',16:'#f59563',32:'#f67c5f',64:'#f65e3b',128:'#edcf72',256:'#edcc61',512:'#edc850',1024:'#edc53f',2048:'#edc22e'};
+function newGame(){grid=Array.from({length:SIZE},()=>Array(SIZE).fill(0));score=0;over=false;document.getElementById('over').classList.remove('show');add();add();render();}
+function add(){const e=[];for(let i=0;i<SIZE;i++)for(let j=0;j<SIZE;j++)if(!grid[i][j])e.push([i,j]);if(!e.length)return;const [i,j]=e[Math.floor(Math.random()*e.length)];grid[i][j]=Math.random()<0.9?2:4;render();}
+function render(){
+  [...board.querySelectorAll('.cell')].forEach(c=>c.remove());
+  const bs=board.clientWidth, cell=(bs-GAP*(SIZE+1))/SIZE;
+  for(let i=0;i<SIZE;i++)for(let j=0;j<SIZE;j++){
+    if(!grid[i][j])continue;
+    const d=document.createElement('div');d.className='cell';
+    d.style.width=cell+'px';d.style.height=cell+'px';
+    d.style.left=(GAP+(GAP+cell)*j)+'px';d.style.top=(GAP+(GAP+cell)*i)+'px';
+    d.style.background=COLORS[grid[i][j]]||'#3c3a32';
+    d.style.color=grid[i][j]<=4?'#776e65':'#fff';
+    d.style.fontSize=(cell*0.42)+'px';
+    d.textContent=grid[i][j];
+    board.appendChild(d);
+  }
+  document.getElementById('sc').textContent=score;
+}
+function slide(row){let a=row.filter(v=>v);for(let i=0;i<a.length-1;i++){if(a[i]===a[i+1]){a[i]*=2;score+=a[i];a.splice(i+1,1);}}while(a.length<SIZE)a.push(0);return a;}
+function move(dir){
+  if(over)return;let moved=false;
+  for(let i=0;i<SIZE;i++){
+    let line=[];
+    for(let j=0;j<SIZE;j++)line.push(dir===0?grid[i][j]:dir===1?grid[j][i]:dir===2?grid[i][SIZE-1-j]:grid[SIZE-1-j][i]);
+    const before=line.join(',');const after=slide(line);
+    if(before!==after.join(','))moved=true;
+    for(let j=0;j<SIZE;j++){const v=after[j];if(dir===0)grid[i][j]=v;else if(dir===1)grid[j][i]=v;else if(dir===2)grid[i][SIZE-1-j]=v;else grid[SIZE-1-j][i]=v;}
+  }
+  if(moved){add();if(!movesLeft()){over=true;document.getElementById('over').classList.add('show');}}
+}
+function movesLeft(){for(let i=0;i<SIZE;i++)for(let j=0;j<SIZE;j++){if(!grid[i][j])return true;if(j<SIZE-1&&grid[i][j]===grid[i][j+1])return true;if(i<SIZE-1&&grid[i][j]===grid[i+1][j])return true;}return false;}
+document.addEventListener('keydown',e=>{if(e.key==='ArrowUp'||e.key==='w')move(0);else if(e.key==='ArrowDown'||e.key==='s')move(2);else if(e.key==='ArrowLeft'||e.key==='a')move(3);else if(e.key==='ArrowRight'||e.key==='d')move(1);});
+let ts=null;
+board.addEventListener('touchstart',e=>{ts={x:e.touches[0].clientX,y:e.touches[0].clientY};},{passive:true});
+board.addEventListener('touchend',e=>{if(!ts)return;const t=e.changedTouches[0];const dx=t.clientX-ts.x,dy=t.clientY-ts.y;if(Math.abs(dx)>Math.abs(dy))move(dx>0?1:3);else move(dy>0?2:0);ts=null;},{passive:true});
+document.getElementById('restart').onclick=newGame;
+document.getElementById('again').onclick=newGame;
+window.addEventListener('resize',render);
+newGame();
+</script>
+</body></html>

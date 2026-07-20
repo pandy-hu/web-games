@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>Flappy Bird</title>
+<style>
+:root{--bg:#eef0f6;--accent:#4f46e5;--shadow:0 1px 3px rgba(20,20,40,.06),0 8px 22px rgba(20,20,40,.06)}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"PingFang SC","Microsoft YaHei",sans-serif;background:var(--bg);color:#1f2430;display:flex;flex-direction:column;align-items:center;min-height:100vh;-webkit-font-smoothing:antialiased}
+.wrap{width:100%;max-width:380px;padding:18px 12px 30px}
+.head{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}
+h1{font-size:20px}
+.best{font-size:13px;color:#7b8190}
+.best b{color:var(--accent)}
+.stage{position:relative;width:100%;border-radius:14px;overflow:hidden;box-shadow:var(--shadow);background:#7ec8e3;aspect-ratio:360/540;touch-action:none}
+canvas{display:block;width:100%;height:100%}
+.overlay{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;background:rgba(20,28,40,.45);color:#fff;text-align:center;padding:20px;backdrop-filter:blur(1px)}
+.overlay.hidden{display:none}
+.overlay h2{font-size:24px}
+.overlay p{font-size:14px;line-height:1.6;max-width:240px}
+.big{font-size:54px;font-weight:800;line-height:1}
+.play{background:#fff;color:var(--accent);border:none;border-radius:12px;padding:12px 26px;font-size:15px;font-weight:800;cursor:pointer;box-shadow:0 4px 14px rgba(0,0,0,.2)}
+.play:active{transform:scale(.96)}
+.hint{font-size:12px;color:#dfe6ee}
+.tip{font-size:13px;color:#7b8190;text-align:center;margin-top:12px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="head"><h1>🐤 Flappy Bird</h1><div class="best">最高 <b id="best">0</b></div></div>
+  <div class="stage">
+    <canvas id="cv" width="360" height="540"></canvas>
+    <div class="overlay" id="ov">
+      <div class="big" id="ovScore">0</div>
+      <h2 id="ovTitle">Flappy Bird</h2>
+      <p id="ovText">点击屏幕 / 空格让小鸟向上飞，穿过绿色管道。别撞到管道和地面！</p>
+      <button class="play" id="playBtn">开始游戏</button>
+      <div class="hint">手机点屏幕 · 电脑空格 / 点击</div>
+    </div>
+  </div>
+  <p class="tip">穿越每对管道得 1 分，速度随分数加快。撞管道或落地即结束。</p>
+</div>
+<script>
+const cv=document.getElementById('cv'), ctx=cv.getContext('2d');
+const W=360,H=540;
+const ov=document.getElementById('ov'), ovScore=document.getElementById('ovScore'), ovTitle=document.getElementById('ovTitle'), ovText=document.getElementById('ovText'), playBtn=document.getElementById('playBtn');
+const bestEl=document.getElementById('best');
+const GROUND=H-48;
+let best=+(localStorage.getItem('flappy_best')||0); bestEl.textContent=best;
+
+let state='ready'; // ready | play | over
+let bird, pipes, score, speed, frame, raf;
+const GRAV=0.42, JUMP=-7.4, GAP=140, PIPE_W=58, SPACING=200;
+
+function reset(){
+  bird={x:90,y:H/2,r:13,vy:0,rot:0};
+  pipes=[]; score=0; speed=2.1; frame=0;
+  let x=W+60;
+  for(let i=0;i<3;i++){pipes.push(makePipe(x)); x+=SPACING;}
+}
+function makePipe(x){
+  const margin=60, minY=margin+GAP/2, maxY=GROUND-margin-GAP/2;
+  const gapY=Math.random()*(maxY-minY)+minY;
+  return {x, gapY, scored:false};
+}
+function flap(){
+  if(state==='ready'){state='play';reset();bird.vy=JUMP;hideOv();loop();}
+  else if(state==='play'){bird.vy=JUMP;}
+  else if(state==='over'){state='ready';showOv('Flappy Bird','点击屏幕 / 空格让小鸟向上飞，穿过绿色管道。别撞到管道和地面！',score);}
+}
+function loop(){
+  if(state!=='play')return;
+  frame++;
+  bird.vy+=GRAV; bird.y+=bird.vy; bird.rot=Math.max(-0.5,Math.min(1.3,bird.vy/9));
+  // 移动管道
+  for(const p of pipes){p.x-=speed;}
+  // 生成 / 回收
+  if(pipes.length && pipes[0].x+PIPE_W<0)pipes.shift();
+  const last=pipes[pipes.length-1];
+  if(last.x < W-SPACING)pipes.push(makePipe(last.x+SPACING));
+  // 计分
+  for(const p of pipes){if(!p.scored && p.x+PIPE_W<bird.x){p.scored=true;score++;speed=Math.min(4.2,2.1+score*0.07);}}
+  // 碰撞
+  if(bird.y+bird.r>=GROUND || bird.y-bird.r<=0){return die();}
+  for(const p of pipes){
+    if(bird.x+bird.r>p.x && bird.x-bird.r<p.x+PIPE_W){
+      if(bird.y-bird.r<p.gapY-GAP/2 || bird.y+bird.r>p.gapY+GAP/2)return die();
+    }
+  }
+  draw();
+  raf=requestAnimationFrame(loop);
+}
+function die(){
+  state='over';
+  if(score>best){best=score;localStorage.setItem('flappy_best',best);bestEl.textContent=best;}
+  draw();
+  showOv('💥 结束', '本次得分 '+score+'　最高 '+best, score, '再来一局');
+}
+function draw(){
+  // 天空
+  const g=ctx.createLinearGradient(0,0,0,H);g.addColorStop(0,'#7ec8e3');g.addColorStop(1,'#bfe7f2');
+  ctx.fillStyle=g;ctx.fillRect(0,0,W,H);
+  // 远景云
+  ctx.fillStyle='rgba(255,255,255,.7)';
+  for(let i=0;i<3;i++){const cx=(i*150+frame*0.3)% (W+80)-40, cy=70+i*40;ctx.beginPath();ctx.ellipse(cx,cy,34,18,0,0,7);ctx.fill();}
+  // 管道
+  for(const p of pipes){drawPipe(p.x,p.gapY);}
+  // 地面
+  ctx.fillStyle='#ded895';ctx.fillRect(0,GROUND,W,H-GROUND);
+  ctx.fillStyle='#caa86a';ctx.fillRect(0,GROUND,W,6);
+  // 鸟
+  ctx.save();ctx.translate(bird.x,bird.y);ctx.rotate(bird.rot);
+  ctx.fillStyle='#ffd23f';ctx.beginPath();ctx.arc(0,0,bird.r,0,7);ctx.fill();
+  ctx.fillStyle='#e8a900';ctx.beginPath();ctx.arc(6,0,bird.r*0.55,0,7);ctx.fill();
+  ctx.fillStyle='#fff';ctx.beginPath();ctx.arc(4,-4,4,0,7);ctx.fill();
+  ctx.fillStyle='#222';ctx.beginPath();ctx.arc(5,-4,2,0,7);ctx.fill();
+  ctx.fillStyle='#f08a24';ctx.beginPath();ctx.moveTo(bird.r-2,-2);ctx.lineTo(bird.r+8,-2);ctx.lineTo(bird.r-2,3);ctx.closePath();ctx.fill();
+  ctx.restore();
+  // 分数
+  ctx.fillStyle='#fff';ctx.strokeStyle='rgba(0,0,0,.35)';ctx.lineWidth=3;
+  ctx.font='bold 40px -apple-system,sans-serif';ctx.textAlign='center';
+  if(state==='play'){ctx.strokeText(score,W/2,70);ctx.fillText(score,W/2,70);}
+}
+function drawPipe(x,gapY){
+  const top=gapY-GAP/2;
+  ctx.fillStyle='#5fb84f';
+  ctx.fillRect(x,0,PIPE_W,top);
+  ctx.fillRect(x,top+GAP,W,H-(top+GAP));
+  ctx.fillStyle='#4a9c3d';
+  ctx.fillRect(x-3,top-18,PIPE_W+6,18);
+  ctx.fillRect(x-3,gapY+GAP,W*0+0,0);
+  ctx.fillRect(x-3,gapY+GAP-0,PIPE_W+6,18);
+  ctx.fillStyle='rgba(255,255,255,.15)';ctx.fillRect(x+6,0,6,top);ctx.fillRect(x+6,gapY+GAP,6,H-(gapY+GAP));
+}
+function showOv(title,text,sc,btn){ov.classList.remove('hidden');ovTitle.textContent=title;ovText.textContent=text;ovScore.textContent=sc??'0';playBtn.textContent=btn||'开始游戏';}
+function hideOv(){ov.classList.add('hidden');}
+
+playBtn.addEventListener('click',e=>{e.stopPropagation();flap();});
+cv.addEventListener('pointerdown',e=>{e.preventDefault();flap();});
+window.addEventListener('keydown',e=>{if(e.code==='Space'||e.code==='ArrowUp'){e.preventDefault();flap();}});
+
+reset();draw();showOv('Flappy Bird','点击屏幕 / 空格让小鸟向上飞，穿过绿色管道。别撞到管道和地面！',0);
+</script>
+</body></html>

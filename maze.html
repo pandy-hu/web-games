@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<title>走迷宫 · Maze</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"PingFang SC","Microsoft YaHei",sans-serif;background:#eef0f6;color:#1f2430;display:flex;flex-direction:column;align-items:center;min-height:100vh;-webkit-font-smoothing:antialiased}
+h1{font-size:20px;margin-top:16px}
+.bar{display:flex;gap:8px;margin:12px 0;flex-wrap:wrap;justify-content:center}
+button{font:inherit;font-size:14px;font-weight:700;border:none;border-radius:10px;padding:9px 14px;background:#4f46e5;color:#fff;cursor:pointer}
+button.sec{background:#fff;color:#4f46e5;box-shadow:0 1px 3px rgba(0,0,0,.08)}
+.stage{background:#fff;border-radius:16px;padding:12px;box-shadow:0 8px 22px rgba(20,20,40,.08);touch-action:none}
+canvas{display:block;border-radius:8px}
+.info{margin:10px 0 4px;color:#7b8190;font-size:13px;text-align:center}
+.hint{color:#9aa0ad;font-size:12px;margin-bottom:18px;text-align:center}
+</style>
+</head>
+<body>
+<h1>🌀 走迷宫 Maze</h1>
+<div class="bar">
+  <button class="sec" id="new">🎲 新迷宫</button>
+  <button class="sec" id="path">💡 显示路径</button>
+</div>
+<div class="stage"><canvas id="cv"></canvas></div>
+<div class="info" id="info"></div>
+<div class="hint">方向键 / WASD 或滑动移动。从 🔵 起点走到 🟢 终点，避开黑墙。点击「显示路径」看解法。</div>
+
+<script>
+const cv=document.getElementById('cv');const ctx=cv.getContext('2d');
+const COLS=8, ROWS=10, CELL=34, PAD=6;
+const W=COLS*2+1, H=ROWS*2+1;
+cv.width=W*CELL+PAD*2; cv.height=H*CELL+PAD*2;
+let maze, px, py, started, won, showPath, t0, timer;
+const info=document.getElementById('info');
+
+function gen(){
+  maze=Array.from({length:H},()=>Array(W).fill(1));
+  const stack=[[1,1]];maze[1][1]=0;
+  const dirs=[[0,-2],[0,2],[-2,0],[2,0]];
+  while(stack.length){
+    const [y,x]=stack[stack.length-1];
+    const opts=[];
+    for(const[dy,dx]of dirs){const ny=y+dy,nx=x+dx;if(ny>0&&ny<H-1&&nx>0&&nx<W-1&&maze[ny][nx]===1)opts.push([ny,nx,dy,dx]);}
+    if(opts.length){
+      const [ny,nx,dy,dx]=opts[Math.floor(Math.random()*opts.length)];
+      maze[y+dy/2][x+dx/2]=0;maze[ny][nx]=0;stack.push([ny,nx]);
+    }else stack.pop();
+  }
+  px=1;py=1;won=false;showPath=false;started=false;document.getElementById('path').textContent='💡 显示路径';
+}
+function isWall(y,x){return maze[y][x]===1;}
+function move(dy,dx){
+  if(won)return;
+  if(!started){started=true;t0=Date.now();}
+  const ny=py+dy,nx=px+dx;
+  if(ny<0||nx<0||ny>=H||nx>=W||isWall(ny,nx))return;
+  py=ny;px=nx;
+  if(px===W-2&&py===H-2){won=true;const s=((Date.now()-t0)/1000).toFixed(1);info.textContent='🎉 通关！用时 '+s+' 秒。点「🎲 新迷宫」再来。';}
+  draw();
+}
+function solvePath(){
+  // BFS from exit to player over open cells
+  const goal=[H-2,W-2];
+  const prev={};const q=[[H-2,W-2]];const seen=new Set([H-2+','+(W-2)]);
+  const d=[[0,1],[0,-1],[1,0],[-1,0]];
+  while(q.length){
+    const [y,x]=q.shift();
+    if(y===py&&x===px)break;
+    for(const[dy,dx]of d){const ny=y+dy,nx=x+dx;const k=ny+','+nx;
+      if(ny<0||nx<0||ny>=H||nx>=W||isWall(ny,nx)||seen.has(k))continue;
+      seen.add(k);prev[k]=[y,x];q.push([ny,nx]);}
+  }
+  const path=[];let cur=py+','+px;
+  while(cur&&cur!==(H-2)+','+(W-2)){path.push(cur);cur=prev[cur]?prev[cur].join(','):null;}
+  path.push((H-2)+','+(W-2));
+  return path;
+}
+function draw(){
+  ctx.clearRect(0,0,cv.width,cv.height);
+  for(let y=0;y<H;y++)for(let x=0;x<W;x++){
+    ctx.fillStyle=isWall(y,x)?'#2b2f3a':'#f3f5f9';
+    ctx.fillRect(PAD+x*CELL,PAD+y*CELL,CELL,CELL);
+  }
+  if(showPath&&!won){
+    const p=solvePath();
+    ctx.strokeStyle='rgba(79,70,229,.55)';ctx.lineWidth=6;ctx.lineCap='round';
+    ctx.beginPath();
+    p.forEach((k,i)=>{const [y,x]=k.split(',').map(Number);const cx=PAD+x*CELL+CELL/2,cy=PAD+y*CELL+CELL/2;if(i===0)ctx.moveTo(cx,cy);else ctx.lineTo(cx,cy);});
+    ctx.stroke();
+  }
+  // exit
+  ctx.fillStyle='#15a86b';
+  ctx.fillRect(PAD+(W-2)*CELL+CELL*0.2,PAD+(H-2)*CELL+CELL*0.2,CELL*0.6,CELL*0.6);
+  // player
+  ctx.fillStyle='#4f46e5';
+  ctx.beginPath();ctx.arc(PAD+px*CELL+CELL/2,PAD+py*CELL+CELL/2,CELL*0.34,0,Math.PI*2);ctx.fill();
+  if(!won)info.textContent='走到右下角绿块即通关'+(started?'':'（开始计时）');
+}
+document.getElementById('new').onclick=()=>{gen();draw();info.textContent='新迷宫已生成，出发！';};
+document.getElementById('path').onclick=()=>{showPath=!showPath;document.getElementById('path').textContent=showPath?'🙈 隐藏路径':'💡 显示路径';draw();};
+
+window.addEventListener('keydown',e=>{
+  const m={ArrowUp:[-1,0],ArrowDown:[1,0],ArrowLeft:[0,-1],ArrowRight:[0,1],w:[-1,0],s:[1,0],a:[0,-1],d:[0,1]};
+  if(m[e.key]){e.preventDefault();move(...m[e.key]);}
+});
+let sx,sy;
+cv.addEventListener('touchstart',e=>{const t=e.touches[0];sx=t.clientX;sy=t.clientY;},{passive:true});
+cv.addEventListener('touchend',e=>{
+  const t=e.changedTouches[0],dx=t.clientX-sx,dy=t.clientY-sy;
+  if(Math.abs(dx)<16&&Math.abs(dy)<16)return;
+  if(Math.abs(dx)>Math.abs(dy))move(0,dx>0?1:-1);else move(dy>0?1:-1,0);
+},{passive:true});
+
+gen();draw();
+</script>
+</body></html>

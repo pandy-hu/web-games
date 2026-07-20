@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<title>网页小游戏 · 可行性分类表</title>
+<style>
+:root{--bg:#f4f5f9;--card:#fff;--text:#1f2430;--sub:#7b8190;--accent:#4f46e5;--soft:#eef2ff;--line:#ebedf2;--shadow:0 1px 3px rgba(20,20,40,.06),0 6px 18px rgba(20,20,40,.05);--green:#15a86b;--amber:#f59e0b;--red:#e23b3b;}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"PingFang SC","Microsoft YaHei",sans-serif;background:var(--bg);color:var(--text);line-height:1.6;-webkit-font-smoothing:antialiased}
+.wrap{max-width:880px;margin:0 auto;padding:22px 16px 60px}
+h1{font-size:22px}
+p.sub{color:var(--sub);font-size:14px;margin-top:4px}
+.bar a{color:var(--accent);text-decoration:none;font-weight:700;font-size:14px}
+.card{background:var(--card);border-radius:14px;padding:16px;box-shadow:var(--shadow);margin-top:16px}
+table{width:100%;border-collapse:collapse;font-size:14px}
+th,td{text-align:left;padding:9px 8px;border-bottom:1px solid var(--line);vertical-align:top}
+th{font-size:12px;color:var(--sub);font-weight:600}
+td .tip{color:var(--sub);font-size:12px}
+.badge{display:inline-block;padding:2px 9px;border-radius:999px;font-size:12px;font-weight:600}
+.e{background:#e7f7ef;color:var(--green)}
+.m{background:#fef4e2;color:var(--amber)}
+.h{background:#fdeaea;color:var(--red)}.n{background:#eef2ff;color:var(--accent)}
+.cat{font-weight:700;margin:18px 0 6px;font-size:15px;display:flex;align-items:center;gap:8px}
+.dot{width:10px;height:10px;border-radius:50%}
+.card.soft{background:var(--soft)}
+b{color:var(--text)}
+</style>
+</head>
+<body>
+<div class="wrap">
+<div class="bar"><a href="index.html">← 返回游戏厅</a></div>
+<h1>🔹 网页小游戏 · 可行性分类表</h1>
+<p class="sub">基于市面热门 / 经典 HTML5 游戏整理，按「单文件网页可落地难度」分级。已为你做好 25 款（见游戏厅）。</p>
+
+<div class="card" style="overflow-x:auto">
+<table>
+<thead><tr><th>游戏</th><th>类型</th><th>热度参考</th><th>可落地难度</th><th>落地要点</th></tr></thead>
+<tbody>
+<tr><td>贪吃蛇 Snake</td><td>街机</td><td>~120万</td><td><span class="badge e">易</span></td><td class="tip">Canvas + 方向键/滑动，状态机简单 ✅ 已做</td></tr>
+<tr><td>记忆翻牌 Memory</td><td>休闲</td><td>~88万</td><td><span class="badge e">易</span></td><td class="tip">DOM 卡片翻转 + 配对判断 ✅ 已做</td></tr>
+<tr><td>打地鼠 Whack-a-mole</td><td>反应</td><td>~83万</td><td><span class="badge e">易</span></td><td class="tip">定时器随机出怪 + 点击计数 ✅ 已做</td></tr>
+<tr><td>井字棋 Tic-Tac-Toe</td><td>棋类</td><td>~85万</td><td><span class="badge e">易</span></td><td class="tip">9 格状态 + 极小化极大 AI ✅ 已做</td></tr>
+<tr><td>石头剪刀布 RPS</td><td>休闲</td><td>~62万</td><td><span class="badge e">易</span></td><td class="tip">随机/读心 AI，纯 UI ✅ 已做</td></tr>
+<tr><td>Simon Says</td><td>记忆</td><td>~59万</td><td><span class="badge e">易</span></td><td class="tip">序列播放 + 用户跟按 + 音效 ✅ 已做</td></tr>
+<tr><td>Pong</td><td>街机</td><td>~78万</td><td><span class="badge e">易</span></td><td class="tip">双拍 + 球反弹基础物理 ✅ 已做</td></tr>
+<tr><td>2048</td><td>益智</td><td>~210万</td><td><span class="badge m">中</span></td><td class="tip">4×4 网格滑动合并，键盘 + 触摸 ✅ 已做</td></tr>
+<tr><td>俄罗斯方块 Tetris</td><td>益智</td><td>~250万</td><td><span class="badge m">中</span></td><td class="tip">7 种方块旋转 + 消行 + 碰撞 ✅ 已做</td></tr>
+<tr><td>泡泡龙 Bubble Shooter</td><td>益智</td><td>~76万</td><td><span class="badge m">中</span></td><td class="tip">六边形网格 + 碰撞吸附 + 同色消除 ✅ 已做</td></tr>
+<tr><td>太空侵略者 Space Invaders</td><td>街机</td><td>~110万</td><td><span class="badge m">中</span></td><td class="tip">敌群阵列移动 + 射击 + 关卡 ✅ 已做</td></tr>
+<tr><td>打砖块 Breakout</td><td>街机</td><td>~92万</td><td><span class="badge m">中</span></td><td class="tip">球拍 + 砖块阵列 + 物理反弹 ✅ 已做</td></tr>
+<tr><td>滑块拼图 Sliding</td><td>益智</td><td>~56万</td><td><span class="badge m">中</span></td><td class="tip">15-puzzle 乱序 + 可解性保证 ✅ 已做</td></tr>
+<tr><td>五子棋 Gomoku</td><td>棋类</td><td>—</td><td><span class="badge m">中</span></td><td class="tip">15×15 棋盘 + 连五判定 + 启发式 AI ✅ 已做</td></tr>
+<tr><td>Wordle / 猜词</td><td>文字</td><td>~35万</td><td><span class="badge m">中</span></td><td class="tip">词库 + 字母着色反馈 ✅ 已做</td></tr>
+<tr><td>Dino 跑酷</td><td>跑酷</td><td>~92万</td><td><span class="badge m">中</span></td><td class="tip">自动奔跑 + 跳跃 + 程序化障碍 ✅ 已做</td></tr>
+<tr><td>扫雷 Minesweeper</td><td>逻辑</td><td>~95万</td><td><span class="badge h">难</span></td><td class="tip">布雷 + Flood Fill 展开 + 标雷 ✅ 已做</td></tr>
+<tr><td>数独 Sudoku</td><td>逻辑</td><td>~130万</td><td><span class="badge h">难</span></td><td class="tip">生成合法盘 + 唯一解 + 校验 ✅ 已做</td></tr>
+<tr><td>Flappy Bird</td><td>反应</td><td>~180万</td><td><span class="badge h">难</span></td><td class="tip">手感调校 + 重力/碰撞 + 程序化管道 ✅ 已做</td></tr>
+<tr><td>接龙 Solitaire</td><td>纸牌</td><td>~110万</td><td><span class="badge h">难</span></td><td class="tip">发牌规则 + 拖拽 + 自动归位 ✅ 已做</td></tr>
+<tr><td>台球 / Pool</td><td>物理</td><td>—</td><td><span class="badge h">难</span> <span style="color:var(--green);font-weight:700">✅已做</span></td><td class="tip">真实碰撞物理 + 摩擦 + 进球判定</td></tr>
+<tr><td>象棋 / 国际象棋</td><td>棋类</td><td>~？</td><td><span class="badge h">难</span></td><td class="tip">完整规则 + 走法生成 + 搜索 AI</td></tr>
+<tr><td>麻将接龙 Mahjong</td><td>益智</td><td>~53万</td><td><span class="badge h">难</span></td><td class="tip">多层遮挡 + 可取判定 + 配对</td></tr>
+</tbody>
+</table>
+</div>
+
+<div class="cat"><span class="dot" style="background:var(--green)"></span>易落地（≈半天/天，纯 UI + 简单逻辑）</div>
+<p class="tip">贪吃蛇、记忆翻牌、打地鼠、井字棋、石头剪刀布、Simon Says、Pong —— 最稳妥的起步选择，体验完整、出错面小。</p>
+<div class="cat"><span class="dot" style="background:var(--amber)"></span>中等（需算法 / 状态管理）</div>
+<p class="tip">2048、俄罗斯方块、打砖块、五子棋、滑块拼图、泡泡龙、太空侵略者、Wordle、Dino 跑酷（全部已做）—— 单文件可做，但逻辑量明显上升。</p>
+<div class="cat"><span class="dot" style="background:var(--red)"></span>较难（物理 / 复杂 AI / 重规则）</div>
+<p class="tip">扫雷（已做）、数独、Flappy Bird、接龙、台球、象棋、麻将接龙 —— 建议作为进阶项，单文件能做但需较多打磨。</p>
+
+<div class="card" style="overflow-x:auto">
+<div class="cat"><span class="dot" style="background:var(--accent)"></span>🆕 扩展推荐 · 新经典（跳出原 24 款清单的额外补充）</div>
+<table>
+<thead><tr><th>游戏</th><th>类型</th><th>可落地</th><th>落地要点</th></tr></thead>
+<tbody>
+<tr><td>推箱子 Sokoban</td><td>益智</td><td><span class="badge n">新</span></td><td class="tip">推箱入位 + 撤销 + 关卡经 BFS 求解器验证可解 ✅ 已做</td></tr>
+<tr><td>数织 Nonogram</td><td>逻辑涂色</td><td><span class="badge n">新</span></td><td class="tip">行列提示自动计算 + 实时标错 ✅ 已做</td></tr>
+<tr><td>走迷宫 Maze</td><td>益智</td><td><span class="badge n">新</span></td><td class="tip">DFS 生成完美迷宫 + 解路径提示 ✅ 已做</td></tr>
+<tr><td>别踩白块 Piano Tiles</td><td>反应</td><td><span class="badge n">新</span></td><td class="tip">黑块下落 + 点击得分 + 速度递增 ✅ 已做</td></tr>
+</tbody>
+</table>
+</div>
+
+<div class="card soft">
+<b>落地进度：</b> 易档 7/7 完成，中档 9/9 完成 ✅，难档 5/7 完成（扫雷、数独、Flappy Bird、接龙、台球 已做），扩展新经典 4/4 完成（推箱子、数织、走迷宫、别踩白块 已做）。下一步可继续难档：象棋、麻将接龙。
+</div>
+</div>
+</body></html>

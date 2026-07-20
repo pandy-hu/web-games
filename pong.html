@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<title>Pong · 弹球对战</title>
+<style>
+:root{--bg:#f4f5f9;--card:#fff;--text:#1f2430;--sub:#7b8190;--accent:#4f46e5;--soft:#eef2ff;--shadow:0 1px 3px rgba(20,20,40,.06),0 6px 18px rgba(20,20,40,.05);}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"PingFang SC","Microsoft YaHei",sans-serif;background:var(--bg);color:var(--text);line-height:1.6;-webkit-font-smoothing:antialiased}
+.wrap{max-width:480px;margin:0 auto;padding:22px 16px 60px}
+.bar a{color:var(--sub);text-decoration:none;font-size:14px}
+h1{font-size:20px}.sub{color:var(--sub);font-size:13px;margin-top:2px}
+.card{background:var(--card);border-radius:16px;padding:14px;box-shadow:var(--shadow);margin-top:16px}
+canvas{display:block;width:100%;height:auto;background:#0f1220;border-radius:12px;touch-action:none}
+.row{display:flex;justify-content:space-between;align-items:center;margin-top:12px;gap:10px}
+.score{display:flex;justify-content:space-around;text-align:center;margin-top:8px}
+.score b{font-size:24px;display:block}.score span{color:var(--sub);font-size:12px}
+.btn{border:0;background:var(--accent);color:#fff;font-weight:700;font-size:14px;padding:10px 16px;border-radius:10px;cursor:pointer}
+.btn.ghost{background:var(--soft);color:var(--accent)}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="bar"><a href="index.html">← 游戏厅</a></div>
+  <h1>🏓 Pong · 弹球对战</h1>
+  <p class="sub">你控制底部球拍，拖动屏幕左右移动。先到 7 分获胜。</p>
+
+  <div class="card">
+    <canvas id="cv" width="360" height="540"></canvas>
+    <div class="score">
+      <div><b id="ps">0</b><span>你</span></div>
+      <div><b id="as">0</b><span>AI</span></div>
+    </div>
+    <div class="row">
+      <button class="btn" id="start">开始 / 重开</button>
+      <span class="sub" id="msg">点开始</span>
+    </div>
+  </div>
+</div>
+<script>
+const cv=document.getElementById('cv'),ctx=cv.getContext('2d');
+const W=cv.width,H=cv.height;
+const PW=70,PH=12,SPEED=5,TARGET=7;
+let px,py,ax,ay,ball,ps,ass,run,raf;
+function reset(){px=W/2-PW/2;py=H-PH-14;ax=W/2-PW/2;ay=14;ps=0;ass=0;newBall(Math.random()<.5?1:-1);draw();updateScore();}
+function newBall(dir){
+  const ang=(Math.random()*0.6-0.3);
+  ball={x:W/2,y:H/2,vx:SPEED*dir*Math.cos(ang),vy:SPEED*Math.sin(ang)+(dir>0?2:-2)};
+}
+function updateScore(){document.getElementById('ps').textContent=ps;document.getElementById('as').textContent=ass;}
+function loop(){
+  if(!run)return;
+  // AI 跟随
+  const target=ball.x-PW/2;
+  ax+=(target-ax)*0.09;ax=Math.max(0,Math.min(W-PW,ax));
+  ball.x+=ball.vx;ball.y+=ball.vy;
+  if(ball.x<8||ball.x>W-8){ball.vx*=-1;ball.x=Math.max(8,Math.min(W-8,ball.x));}
+  // 玩家拍（底部）
+  if(ball.y>py-PH&&ball.y<py+PH&&ball.x>px&&ball.x<px+PW&&ball.vy>0){ball.vy*=-1.04;const off=(ball.x-(px+PW/2))/(PW/2);ball.vx+=off*2;}
+  // AI 拍（顶部）
+  if(ball.y>ay&&ball.y<ay+PH&&ball.x>ax&&ball.x<ax+PW&&ball.vy<0){ball.vy*=-1.04;const off=(ball.x-(ax+PW/2))/(PW/2);ball.vx+=off*2;}
+  if(ball.y>H){ass++;after();}
+  else if(ball.y<0){ps++;after();}
+  draw();
+  raf=requestAnimationFrame(loop);
+}
+function after(){
+  updateScore();
+  if(ps>=TARGET||ass>=TARGET){run=false;document.getElementById('msg').textContent=ps>=TARGET?'🎉 你赢了！':'AI 赢了';return;}
+  newBall(ps>ass?-1:1);
+}
+function draw(){
+  ctx.clearRect(0,0,W,H);
+  // 中线
+  ctx.strokeStyle='rgba(255,255,255,.15)';ctx.setLineDash([6,8]);ctx.beginPath();ctx.moveTo(0,H/2);ctx.lineTo(W,H/2);ctx.stroke();ctx.setLineDash([]);
+  ctx.fillStyle='#fff';
+  ctx.fillRect(px,py,PW,PH);
+  ctx.fillStyle='#ff6b6b';ctx.fillRect(ax,ay,PW,PH);
+  ctx.beginPath();ctx.arc(ball.x,ball.y,7,0,Math.PI*2);ctx.fillStyle='#ffd166';ctx.fill();
+}
+function pointer(e){const r=cv.getBoundingClientRect();const x=(e.touches?e.touches[0].clientX:e.clientX)-r.left;const lx=x*(W/r.width);px=Math.max(0,Math.min(W-PW,lx-PW/2));}
+cv.addEventListener('pointermove',pointer);
+cv.addEventListener('touchmove',e=>{pointer(e);e.preventDefault();},{passive:false});
+document.getElementById('start').onclick=()=>{reset();run=true;document.getElementById('msg').textContent='对战中';if(raf)cancelAnimationFrame(raf);loop();};
+reset();document.getElementById('msg').textContent='点开始';
+</script>
+</body></html>

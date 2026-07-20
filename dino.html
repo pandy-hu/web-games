@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<title>Dino 跑酷</title>
+<style>
+:root{--bg:#eef0f6;--card:#fff;--text:#1f2430;--sub:#7b8190;--accent:#4f46e5;--line:#d9dde6;--shadow:0 1px 3px rgba(20,20,40,.06),0 8px 22px rgba(20,20,40,.06);}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"PingFang SC","Microsoft YaHei",sans-serif;background:var(--bg);color:var(--text);min-height:100vh;display:flex;flex-direction:column;align-items:center}
+.bar{width:100%;max-width:560px;padding:10px 14px;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid var(--line);background:var(--card)}
+.bar a{color:var(--accent);text-decoration:none;font-weight:700;font-size:14px}
+.bar b{font-size:16px}
+.wrap{width:100%;max-width:560px;padding:14px}
+canvas{width:100%;background:var(--card);border-radius:14px;box-shadow:var(--shadow);display:block;touch-action:none}
+.meta{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;font-size:14px;color:var(--sub)}
+.meta b{color:var(--text);font-size:18px}
+.btn{background:var(--accent);color:#fff;border:none;border-radius:10px;padding:9px 18px;font-weight:700;font-size:14px;cursor:pointer}
+.hint{text-align:center;color:var(--sub);font-size:13px;margin-top:10px}
+</style>
+</head>
+<body>
+<div class="bar"><a href="index.html">← 游戏厅</a><b>Dino 跑酷</b><b id="best">最高 0</b></div>
+<div class="wrap">
+  <div class="meta"><span>得分 <b id="score">0</b></span><button class="btn" id="start">开始 / 重玩</button></div>
+  <canvas id="cv" width="560" height="220"></canvas>
+  <p class="hint">空格 / ↑ / 点击屏幕 = 跳跃　躲避仙人掌，速度会越来越快</p>
+</div>
+<script>
+const cv=document.getElementById('cv'),ctx=cv.getContext('2d');
+const W=cv.width,H=cv.height,GY=H-40;
+let dino,jumpV,onGround,obs,spd,score,best,raf,running;
+best=+(localStorage.getItem('dinoBest')||0);document.getElementById('best').textContent='最高 '+best;
+function reset(){dino={x:60,y:GY-34,w:28,h:34};jumpV=0;onGround=true;obs=[];spd=4.2;score=0;running=true;ctx.clearRect(0,0,W,H);}
+function spawn(){if(Math.random()<0.03&&(!obs.length||obs[obs.length-1].x<W-160)){const h=Math.random()<0.4?44:24;obs.push({x:W,y:GY-h,w:16,h:h});}}
+function jump(){if(onGround){jumpV=-9;onGround=false;}}
+function step(){
+  if(!running)return;
+  ctx.clearRect(0,0,W,H);
+  // ground
+  ctx.strokeStyle='#cdd2dd';ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(0,GY+2);ctx.lineTo(W,GY+2);ctx.stroke();
+  // dino
+  if(!onGround){dino.y+=jumpV;jumpV+=0.55;if(dino.y>=GY-34){dino.y=GY-34;onGround=true;jumpV=0;}}
+  ctx.fillStyle='#2f3542';ctx.fillRect(dino.x,dino.y,dino.w,dino.h);
+  ctx.fillStyle='#fff';ctx.fillRect(dino.x+18,dino.y+8,5,5);
+  // obstacles
+  spawn();
+  for(let i=obs.length-1;i>=0;i--){const o=obs[i];o.x-=spd;ctx.fillStyle='#15a86b';ctx.fillRect(o.x,o.y,o.w,o.h);if(o.x+o.w<0)obs.splice(i,1);
+    if(dino.x<o.x+o.w&&dino.x+dino.w>o.x&&dino.y<o.y+o.h&&dino.y+dino.h>o.y){running=false;gameOver();return;}}
+  score+=1;spd=4.2+Math.min(score/600,5);
+  document.getElementById('score').textContent=Math.floor(score/5);
+  raf=requestAnimationFrame(step);
+}
+function gameOver(){if(score>best){best=Math.floor(score/5);localStorage.setItem('dinoBest',best);document.getElementById('best').textContent='最高 '+best;}ctx.fillStyle='#1f2430';ctx.font='bold 22px sans-serif';ctx.textAlign='center';ctx.fillText('撞到了！得分 '+Math.floor(score/5),W/2,H/2);ctx.font='14px sans-serif';ctx.fillText('点「开始」再来',W/2,H/2+24);}
+document.getElementById('start').onclick=()=>{cancelAnimationFrame(raf);reset();step();};
+document.addEventListener('keydown',e=>{if(e.code==='Space'||e.code==='ArrowUp'){e.preventDefault();if(!running){reset();step();}else jump();}});
+cv.addEventListener('pointerdown',()=>{if(!running){reset();step();}else jump();});
+// initial idle frame
+ctx.strokeStyle='#cdd2dd';ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(0,GY+2);ctx.lineTo(W,GY+2);ctx.stroke();
+ctx.fillStyle='#2f3542';ctx.fillRect(60,GY-34,28,34);
+</script>
+</body></html>

@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>数独 Sudoku</title>
+<style>
+:root{--bg:#eef0f6;--card:#fff;--text:#1f2430;--sub:#7b8190;--accent:#4f46e5;--soft:#eef2ff;--line:#d6dae4;--shadow:0 1px 3px rgba(20,20,40,.06),0 8px 22px rgba(20,20,40,.06);--green:#15a86b;--red:#e23b3b;--sel:#cdd6ff;--hl:#e6ebff;}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"PingFang SC","Microsoft YaHei",sans-serif;background:var(--bg);color:var(--text);line-height:1.5;-webkit-font-smoothing:antialiased;display:flex;flex-direction:column;min-height:100vh;align-items:center}
+.wrap{width:100%;max-width:480px;padding:18px 14px 30px}
+.head{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}
+h1{font-size:20px}
+.top{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:12px}
+.btn{flex:1;min-width:78px;border:none;background:var(--soft);color:var(--accent);font-weight:700;font-size:13px;padding:9px 6px;border-radius:10px;cursor:pointer;transition:background .12s}
+.btn:active{background:#dde3ff}
+.btn.on{background:var(--accent);color:#fff}
+.btn.warn{background:#fdeaea;color:var(--red)}
+.info{display:flex;justify-content:space-between;font-size:13px;color:var(--sub);margin-bottom:8px}
+.info b{color:var(--text)}
+.board{display:grid;grid-template-columns:repeat(9,1fr);gap:1px;background:var(--line);border:2px solid #aeb4c4;border-radius:8px;overflow:hidden;aspect-ratio:1/1;touch-action:manipulation}
+.cell{background:var(--card);display:flex;align-items:center;justify-content:center;font-size:clamp(15px,5vw,24px);font-weight:600;position:relative;cursor:pointer;user-select:none}
+.cell.given{color:#1f2430;font-weight:800}
+.cell.user{color:var(--accent)}
+.cell.hl{background:var(--hl)}
+.cell.sel{background:var(--sel)}
+.cell.bad{color:var(--red)}
+.cell.bad::after{content:"";position:absolute;inset:2px;border:2px solid var(--red);border-radius:5px;pointer-events:none}
+/* 3x3 粗线 */
+.cell.br{border-right:2px solid #aeb4c4}
+.cell.bb{border-bottom:2px solid #aeb4c4}
+.pen{position:absolute;font-size:9px;line-height:1;display:grid;grid-template-columns:repeat(3,1fr);width:100%;height:100%;padding:2px;color:var(--sub);font-weight:600}
+.pen span{display:flex;align-items:center;justify-content:center}
+.keys{display:grid;grid-template-columns:repeat(9,1fr);gap:6px;margin-top:14px}
+.key{aspect-ratio:1/1;border:none;background:var(--card);box-shadow:var(--shadow);border-radius:10px;font-size:20px;font-weight:700;color:var(--accent);cursor:pointer}
+.key:active{background:var(--soft)}
+.tools{display:flex;gap:8px;margin-top:10px}
+.tool{flex:1;border:none;background:var(--card);box-shadow:var(--shadow);border-radius:10px;padding:11px 4px;font-size:13px;font-weight:700;color:var(--text);cursor:pointer}
+.tool:active{background:var(--soft)}
+.tool.on{background:var(--accent);color:#fff}
+.tool.pen-on{background:#fff7e6;color:#b7791f}
+.msg{text-align:center;margin-top:12px;font-size:14px;font-weight:700;min-height:20px}
+.msg.win{color:var(--green)}
+.msg.lose{color:var(--red)}
+@media(max-width:360px){.keys{gap:4px}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="head"><h1>🔢 数独 Sudoku</h1></div>
+  <div class="top">
+    <button class="btn on" data-d="easy">简单</button>
+    <button class="btn" data-d="medium">中等</button>
+    <button class="btn" data-d="hard">困难</button>
+    <button class="btn" id="new">🔄 新游戏</button>
+  </div>
+  <div class="info">
+    <span>⏱️ <b id="time">00:00</b></span>
+    <span>❌ 错误 <b id="mistakes">0</b>/3</span>
+    <span>✅ 已填 <b id="filled">0</b>/81</span>
+  </div>
+  <div class="board" id="board"></div>
+  <div class="keys" id="keys"></div>
+  <div class="tools">
+    <button class="tool" id="pen">✏️ 铅笔</button>
+    <button class="tool" id="erase">🧽 擦除</button>
+    <button class="tool" id="hint">💡 提示</button>
+    <button class="tool" id="check">🔍 查错</button>
+  </div>
+  <div class="msg" id="msg">点格子，再按数字键填数</div>
+</div>
+<script>
+const N=9, BOX=3;
+const DIFF={easy:40, medium:50, hard:58}; // 挖空数（越大越难）
+let solution, puzzle, cur, given, notes, selected=-1, difficulty='easy';
+let timer=0, tick=null, mistakes=0, penMode=false, finished=false;
+
+const boardEl=document.getElementById('board');
+const keysEl=document.getElementById('keys');
+const msgEl=document.getElementById('msg');
+
+// ---------- 生成完整解 ----------
+function shuffle(a){for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];}return a;}
+function canPlace(g,r,c,n){for(let i=0;i<N;i++){if(g[r][i]===n||g[i][c]===n)return false;}
+  const br=(r-BOX*Math.floor(r/BOX)), bc=(c-BOX*Math.floor(c/BOX));
+  const sr=Math.floor(r/BOX)*BOX, sc=Math.floor(c/BOX)*BOX;
+  for(let i=0;i<BOX;i++)for(let j=0;j<BOX;j++)if(g[sr+i][sc+j]===n)return false;return true;}
+function fill(g){for(let r=0;r<N;r++)for(let c=0;c<N;c++){if(g[r][c]===0){const nums=shuffle([1,2,3,4,5,6,7,8,9]);for(const n of nums){if(canPlace(g,r,c,n)){g[r][c]=n;if(fill(g))return true;g[r][c]=0;}}return false;}}return true;}
+function generateFull(){const g=Array.from({length:N},()=>Array(N).fill(0));fill(g);return g;}
+
+// ---------- 解数统计（最多数到 limit） ----------
+function countSolutions(g,limit){let count=0;
+  function rec(){if(count>=limit)return;for(let r=0;r<N;r++)for(let c=0;c<N;c++){if(g[r][c]===0){
+    for(let n=1;n<=9;n++){if(canPlace(g,r,c,n)){g[r][c]=n;rec();g[r][c]=0;if(count>=limit)return;}}return;}}
+    count++;return;}
+  rec();return count;}
+function clone(g){return g.map(row=>row.slice());}
+
+// ---------- 挖洞（对称挖，保证唯一解） ----------
+function makePuzzle(full,holes){
+  const g=clone(full);let removed=0;
+  const cells=[];for(let r=0;r<N;r++)for(let c=0;c<N;c++)cells.push([r,c]);
+  shuffle(cells);
+  // 第一遍：对称挖（更美观）
+  for(const [r,c] of cells){if(removed>=holes)break;
+    if(g[r][c]===0)continue;
+    const r2=N-1-r, c2=N-1-c; const sym=(r===r2&&c===c2);
+    const v1=g[r][c], v2=g[r2][c2];
+    g[r][c]=0; if(!sym)g[r2][c2]=0;
+    if(countSolutions(clone(g),2)===1)removed+= sym?1:2;
+    else{g[r][c]=v1; if(!sym)g[r2][c2]=v2;}
+  }
+  // 第二遍：若未达标，非对称补挖（仍校验唯一解）
+  if(removed<holes){
+    shuffle(cells);
+    for(const [r,c] of cells){if(removed>=holes)break;
+      if(g[r][c]===0)continue;
+      const v=g[r][c];g[r][c]=0;
+      if(countSolutions(clone(g),2)===1)removed++;
+      else g[r][c]=v;
+    }
+  }
+  return g;
+}
+
+// ---------- 初始化 ----------
+function newGame(){
+  finished=false; mistakes=0; selected=-1; penMode=false;
+  document.getElementById('pen').classList.remove('pen-on');document.getElementById('pen').textContent='✏️ 铅笔';
+  solution=generateFull();
+  puzzle=makePuzzle(solution,DIFF[difficulty]);
+  cur=clone(puzzle); given=cur.map(row=>row.map(v=>v!==0));
+  notes=Array.from({length:N},()=>Array.from({length:N},()=>new Set()));
+  render(); updateInfo(); setMsg('点格子，再按数字键填数','');
+  timer=0; clearInterval(tick); tick=setInterval(()=>{timer++;document.getElementById('time').textContent=fmt(timer);},1000);
+}
+function fmt(s){const m=String(Math.floor(s/60)).padStart(2,'0');const ss=String(s%60).padStart(2,'0');return m+':'+ss;}
+
+// ---------- 渲染 ----------
+function render(){
+  boardEl.innerHTML='';
+  for(let r=0;r<N;r++)for(let c=0;c<N;c++){
+    const cell=puzzle[r][c];
+    const d=document.createElement('div');
+    d.className='cell';
+    if(c%3===2&&c!==8)d.classList.add('br');
+    if(r%3===2&&r!==8)d.classList.add('bb');
+    if(given[r][c])d.classList.add('given');
+    const val=cur[r][c];
+    if(val!==0){d.textContent=val; if(!given[r][c])d.classList.add('user');}
+    else if(notes[r][c].size){const p=document.createElement('div');p.className='pen';for(let n=1;n<=9;n++){const s=document.createElement('span');s.textContent=notes[r][c].has(n)?n:'';p.appendChild(s);}d.appendChild(p);}
+    d.dataset.r=r;d.dataset.c=c;
+    d.addEventListener('click',()=>select(r,c));
+    boardEl.appendChild(d);
+  }
+  highlight();
+}
+function select(r,c){selected=r*N+c;highlight();}
+function highlight(){
+  const cells=boardEl.children;const sr=Math.floor(selected/N),sc=selected%N;
+  const selVal=selected>=0?cur[sr][sc]:0;
+  const conflicts=findConflicts();
+  const selSet=selected>=0?conflicts.has(selected):false;
+  for(let i=0;i<cells.length;i++){
+    const r=Math.floor(i/N),c=i%N;
+    cells[i].classList.remove('hl','sel','bad');
+    if(selected<0)continue;
+    const sameRow=r===sr,sameCol=c===sc;
+    const sameBox=Math.floor(r/3)===Math.floor(sr/3)&&Math.floor(c/3)===Math.floor(sc/3);
+    if(i===selected)cells[i].classList.add('sel');
+    else if(sameRow||sameCol||sameBox)cells[i].classList.add('hl');
+    if(selVal!==0&&cur[r][c]===selVal&&i!==selected)cells[i].classList.add('hl');
+    if(conflicts.has(i))cells[i].classList.add('bad');
+  }
+}
+function findConflicts(){
+  const bad=new Set();
+  // 行
+  for(let r=0;r<N;r++){const seen={};for(let c=0;c<N;c++){const v=cur[r][c];if(v){if(seen[v]!==undefined){bad.add(seen[v]);bad.add(r*N+c);}else seen[v]=r*N+c;}}}
+  // 列
+  for(let c=0;c<N;c++){const seen={};for(let r=0;r<N;r++){const v=cur[r][c];if(v){if(seen[v]!==undefined){bad.add(seen[v]);bad.add(r*N+c);}else seen[v]=r*N+c;}}}
+  // 宫
+  for(let br=0;br<3;br++)for(let bc=0;bc<3;bc++){const seen={};for(let i=0;i<3;i++)for(let j=0;j<3;j++){const r=br*3+i,c=bc*3+j;const v=cur[r][c];if(v){if(seen[v]!==undefined){bad.add(seen[v]);bad.add(r*N+c);}else seen[v]=r*N+c;}}}
+  return bad;
+}
+
+// ---------- 输入 ----------
+function input(n){
+  if(finished||selected<0)return;
+  const r=Math.floor(selected/N),c=selected%N;
+  if(given[r][c])return;
+  if(penMode){
+    if(cur[r][c]!==0)return; // 已填数不再记笔记
+    if(notes[r][c].has(n))notes[r][c].delete(n); else notes[r][c].add(n);
+    render(); return;
+  }
+  // 正式填数
+  if(cur[r][c]===n){cur[r][c]=0;} else {cur[r][c]=n; notes[r][c].clear();}
+  // 错误判定：与唯一解不符
+  if(cur[r][c]!==0&&cur[r][c]!==solution[r][c]){mistakes++;document.getElementById('mistakes').textContent=mistakes;flashWrong(r,c);}
+  render(); updateInfo();
+  if(isSolved())win();
+  else if(mistakes>=3)lose();
+}
+function flashWrong(r,c){const idx=r*N+c;const el=boardEl.children[idx];el.classList.add('bad');}
+function erase(){if(finished||selected<0)return;const r=Math.floor(selected/N),c=selected%N;if(given[r][c])return;cur[r][c]=0;notes[r][c].clear();render();updateInfo();setMsg('已擦除','');}
+function hint(){if(finished)return;
+  // 找一个空格或填错的格，给正确值
+  const cands=[];for(let r=0;r<N;r++)for(let c=0;c<N;c++)if(cur[r][c]!==solution[r][c])cands.push([r,c]);
+  if(!cands.length)return;
+  const [r,c]=cands[Math.floor(Math.random()*cands.length)];
+  cur[r][c]=solution[r][c];given[r][c]=true;notes[r][c].clear();selected=r*N+c;
+  render();updateInfo();setMsg('💡 已填入一格','');
+  if(isSolved())win();
+}
+function checkBoard(){
+  if(finished)return;
+  const bad=findConflicts();
+  if(bad.size){setMsg('🔍 有 '+Math.ceil(bad.size/2)+' 处冲突（红框）','lose');}
+  else{ // 检查与解不符的格子
+    let wrong=0;for(let r=0;r<N;r++)for(let c=0;c<N;c++)if(cur[r][c]!==0&&cur[r][c]!==solution[r][c])wrong++;
+    if(wrong)setMsg('🔍 有 '+wrong+' 格与答案不符','lose');else setMsg('✅ 当前无冲突','win');
+  }
+}
+function isSolved(){for(let r=0;r<N;r++)for(let c=0;c<N;c++)if(cur[r][c]!==solution[r][c])return false;return true;}
+function win(){finished=true;clearInterval(tick);setMsg('🎉 通关！用时 '+fmt(timer),'win');}
+function lose(){finished=true;clearInterval(tick);setMsg('💥 错误达 3 次，挑战失败','lose');}
+
+function updateInfo(){let f=0;for(let r=0;r<N;r++)for(let c=0;c<N;c++)if(cur[r][c]!==0)f++;document.getElementById('filled').textContent=f;}
+function setMsg(t,cls){msgEl.textContent=t;msgEl.className='msg'+(cls?(' '+cls):'');}
+
+// ---------- 控件 ----------
+for(let n=1;n<=9;n++){const b=document.createElement('button');b.className='key';b.textContent=n;b.addEventListener('click',()=>input(n));keysEl.appendChild(b);}
+document.querySelectorAll('.btn[data-d]').forEach(b=>b.addEventListener('click',()=>{
+  document.querySelectorAll('.btn[data-d]').forEach(x=>x.classList.remove('on'));
+  b.classList.add('on');difficulty=b.dataset.d;newGame();
+}));
+document.getElementById('new').addEventListener('click',newGame);
+document.getElementById('erase').addEventListener('click',erase);
+document.getElementById('hint').addEventListener('click',hint);
+document.getElementById('check').addEventListener('click',checkBoard);
+document.getElementById('pen').addEventListener('click',()=>{penMode=!penMode;const b=document.getElementById('pen');b.classList.toggle('pen-on',penMode);b.textContent=penMode?'✏️ 铅笔·开':'✏️ 铅笔';});
+
+// 键盘支持
+document.addEventListener('keydown',e=>{
+  if(e.key>='1'&&e.key<='9')input(+e.key);
+  else if(e.key==='Backspace'||e.key==='Delete'||e.key==='0')erase();
+  else if(e.key.startsWith('Arrow')){if(selected<0)selected=40;let r=Math.floor(selected/N),c=selected%N;if(e.key==='ArrowUp')r=(r+8)%9;if(e.key==='ArrowDown')r=(r+1)%9;if(e.key==='ArrowLeft')c=(c+8)%9;if(e.key==='ArrowRight')c=(c+1)%9;selected=r*N+c;highlight();e.preventDefault();}
+});
+
+newGame();
+</script>
+</body></html>

@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<title>网页小游戏 · 游戏厅</title>
+<style>
+:root{--bg:#eef0f6;--card:#fff;--text:#1f2430;--sub:#7b8190;--accent:#4f46e5;--soft:#eef2ff;--line:#ebedf2;--shadow:0 1px 3px rgba(20,20,40,.06),0 8px 22px rgba(20,20,40,.06);--green:#15a86b;--amber:#f59e0b;--red:#e23b3b;}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"PingFang SC","Microsoft YaHei",sans-serif;background:var(--bg);color:var(--text);line-height:1.6;-webkit-font-smoothing:antialiased}
+.wrap{max-width:880px;margin:0 auto;padding:26px 16px 60px}
+.head{text-align:center}
+h1{font-size:26px;letter-spacing:.5px}
+.sub{color:var(--sub);font-size:14px;margin-top:6px}
+.stat{display:inline-flex;gap:8px;margin-top:12px;flex-wrap:wrap;justify-content:center}
+.chip{background:var(--card);border-radius:999px;padding:5px 14px;font-size:13px;box-shadow:var(--shadow)}
+.chip b{color:var(--accent)}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:14px;margin-top:24px}
+.g{background:var(--card);border-radius:16px;padding:18px 16px;box-shadow:var(--shadow);text-decoration:none;color:inherit;display:flex;flex-direction:column;transition:transform .12s,box-shadow .12s}
+.g:hover{transform:translateY(-3px);box-shadow:0 6px 16px rgba(20,20,40,.12)}
+.g:active{transform:scale(.98)}
+.ico{font-size:40px;line-height:1}
+.t{font-weight:800;font-size:16px;margin-top:10px}
+.d{color:var(--sub);font-size:12px;margin-top:3px}
+.badge{display:inline-block;padding:2px 9px;border-radius:999px;font-size:11px;font-weight:700;margin-top:9px;align-self:flex-start}
+.e{background:#e7f7ef;color:var(--green)}.m{background:#fef4e2;color:var(--amber)}.h{background:#fdeaea;color:var(--red)}.n{background:#eef2ff;color:var(--accent)}
+.foot{text-align:center;margin-top:30px}
+.link{color:var(--accent);text-decoration:none;font-weight:700;font-size:14px;background:var(--card);padding:11px 18px;border-radius:12px;box-shadow:var(--shadow);display:inline-block}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="head">
+    <h1>🔹 网页小游戏 · 游戏厅</h1>
+    <p class="sub">单文件、离线可用、手机电脑都能玩。点卡片直接开玩。</p>
+    <div class="stat">
+      <span class="chip">已上线 <b>25</b> 款</span>
+      <span class="chip">🟢 易 <b>7</b></span>
+      <span class="chip">🟡 中 <b>9</b></span>
+      <span class="chip">🔴 难 <b>5</b></span>
+      <span class="chip">🆕 新 <b>4</b></span>
+    </div>
+  </div>
+
+  <div class="grid">
+    <a class="g" href="snake.html"><div class="ico">🐍</div><div class="t">贪吃蛇</div><div class="d">吃豆变长，撞墙即输</div><span class="badge e">易</span></a>
+    <a class="g" href="2048.html"><div class="ico">🔢</div><div class="t">2048</div><div class="d">滑动合并，凑出 2048</div><span class="badge m">中</span></a>
+    <a class="g" href="memory.html"><div class="ico">🎴</div><div class="t">记忆翻牌</div><div class="d">最少步数配对 8 对</div><span class="badge e">易</span></a>
+    <a class="g" href="whack.html"><div class="ico">🔨</div><div class="t">打地鼠</div><div class="d">30 秒手速大作战</div><span class="badge e">易</span></a>
+    <a class="g" href="tic-tac-toe.html"><div class="ico">⭕</div><div class="t">井字棋</div><div class="d">人机对战，含无敌 AI</div><span class="badge e">易</span></a>
+    <a class="g" href="rps.html"><div class="ico">✊</div><div class="t">石头剪刀布</div><div class="d">随机 / 读心 AI 对决</div><span class="badge e">易</span></a>
+    <a class="g" href="simon.html"><div class="ico">🎵</div><div class="t">Simon Says</div><div class="d">记序列跟按，越记越长</div><span class="badge e">易</span></a>
+    <a class="g" href="pong.html"><div class="ico">🏓</div><div class="t">Pong</div><div class="d">拖动球拍，先到 7 分</div><span class="badge e">易</span></a>
+    <a class="g" href="tetris.html"><div class="ico">🧱</div><div class="t">俄罗斯方块</div><div class="d">旋转下落，消行得分</div><span class="badge m">中</span></a>
+    <a class="g" href="breakout.html"><div class="ico">🧱</div><div class="t">打砖块</div><div class="d">挡板接球，清空砖墙</div><span class="badge m">中</span></a>
+    <a class="g" href="gomoku.html"><div class="ico">⚫</div><div class="t">五子棋</div><div class="d">对战 AI，先连五子</div><span class="badge m">中</span></a>
+    <a class="g" href="sliding.html"><div class="ico">🧩</div><div class="t">滑块拼图</div><div class="d">复原顺序，数字/图案</div><span class="badge m">中</span></a>
+    <a class="g" href="wordle.html"><div class="ico">🔤</div><div class="t">Wordle 猜词</div><div class="d">6 次猜 5 字母单词</div><span class="badge m">中</span></a>
+    <a class="g" href="dino.html"><div class="ico">🦖</div><div class="t">Dino 跑酷</div><div class="d">跳跃躲避，越跑越快</div><span class="badge m">中</span></a>
+    <a class="g" href="invaders.html"><div class="ico">👾</div><div class="t">太空侵略者</div><div class="d">移动射击清敌群</div><span class="badge m">中</span></a>
+    <a class="g" href="bubble.html"><div class="ico">🫧</div><div class="t">泡泡龙</div><div class="d">同色三连即消除</div><span class="badge m">中</span></a>
+    <a class="g" href="minesweeper.html"><div class="ico">💣</div><div class="t">扫雷</div><div class="d">布雷 + 展开 + 标记</div><span class="badge h">难</span></a>
+    <a class="g" href="sudoku.html"><div class="ico">🔢</div><div class="t">数独</div><div class="d">唯一解，铅笔标记</div><span class="badge h">难</span></a>
+    <a class="g" href="flappy.html"><div class="ico">🐤</div><div class="t">Flappy Bird</div><div class="d">点击飞，穿管道</div><span class="badge h">难</span></a>
+    <a class="g" href="solitaire.html"><div class="ico">🃏</div><div class="t">接龙</div><div class="d">经典纸牌收牌</div><span class="badge h">难</span></a>
+    <a class="g" href="pool.html"><div class="ico">🎱</div><div class="t">台球</div><div class="d">瞄准击球，清台通关</div><span class="badge h">难</span></a>
+    <a class="g" href="sokoban.html"><div class="ico">📦</div><div class="t">推箱子</div><div class="d">推箱入位，含撤销</div><span class="badge n">新</span></a>
+    <a class="g" href="nonogram.html"><div class="ico">🔢</div><div class="t">数织</div><div class="d">按提示涂出图案</div><span class="badge n">新</span></a>
+    <a class="g" href="maze.html"><div class="ico">🌀</div><div class="t">走迷宫</div><div class="d">生成迷宫，走到终点</div><span class="badge n">新</span></a>
+    <a class="g" href="tiles.html"><div class="ico">🎹</div><div class="t">别踩白块</div><div class="d">点黑块，别点白块</div><span class="badge n">新</span></a>
+  </div>
+
+  <div class="foot">
+    <a class="link" href="feasibility.html">📊 查看完整可行性分类表（24 款）</a>
+  </div>
+</div>
+</body></html>

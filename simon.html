@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<title>Simon Says · 记忆序列</title>
+<style>
+:root{--bg:#f4f5f9;--card:#fff;--text:#1f2430;--sub:#7b8190;--accent:#4f46e5;--soft:#eef2ff;--shadow:0 1px 3px rgba(20,20,40,.06),0 6px 18px rgba(20,20,40,.05);}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"PingFang SC","Microsoft YaHei",sans-serif;background:var(--bg);color:var(--text);line-height:1.6;-webkit-font-smoothing:antialiased}
+.wrap{max-width:480px;margin:0 auto;padding:22px 16px 60px}
+.bar a{color:var(--sub);text-decoration:none;font-size:14px}
+h1{font-size:20px}.sub{color:var(--sub);font-size:13px;margin-top:2px}
+.card{background:var(--card);border-radius:16px;padding:18px;box-shadow:var(--shadow);margin-top:16px;display:flex;flex-direction:column;align-items:center}
+.status{font-size:16px;font-weight:700;text-align:center;margin:6px 0 12px;min-height:24px}
+.pad{position:relative;width:min(78vw,300px);aspect-ratio:1/1;border-radius:50%;overflow:hidden;display:grid;grid-template-columns:1fr 1fr;gap:8px;background:#222;padding:8px}
+.q{border:0;cursor:pointer;opacity:.55;transition:opacity .12s}
+.q:active{opacity:1}
+.q0{background:#16a34a;border-radius:100% 0 0 0}
+.q1{background:#dc2626;border-radius:0 100% 0 0}
+.q2{background:#facc15;border-radius:0 0 0 100%}
+.q3{background:#2563eb;border-radius:0 0 100% 0}
+.q.lit{opacity:1}
+.score{display:flex;gap:26px;text-align:center;margin-top:14px}
+.score b{font-size:22px;display:block}.score span{color:var(--sub);font-size:12px}
+.btn{margin-top:14px;width:100%;max-width:300px;border:0;background:var(--accent);color:#fff;font-weight:700;font-size:14px;padding:11px;border-radius:10px;cursor:pointer}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="bar"><a href="index.html">← 游戏厅</a></div>
+  <h1>🎵 Simon Says · 记忆序列</h1>
+  <p class="sub">记住亮灯顺序，跟着按出来，每关 +1 步。</p>
+
+  <div class="card">
+    <div class="status" id="status">点「开始」挑战记忆</div>
+    <div class="pad" id="pad">
+      <button class="q q0" data-i="0"></button>
+      <button class="q q1" data-i="1"></button>
+      <button class="q q2" data-i="2"></button>
+      <button class="q q3" data-i="3"></button>
+    </div>
+    <div class="score">
+      <div><b id="lvl">0</b><span>当前关</span></div>
+      <div><b id="best">0</b><span>最高</span></div>
+    </div>
+    <button class="btn" id="start">开始</button>
+  </div>
+</div>
+<script>
+const NOTE=[329.63,261.63,220,392.00];
+const qs=[...document.querySelectorAll('.q')];
+let seq=[],step=0,playing=false,best=+(localStorage.getItem('simonBest')||0);
+const statusEl=document.getElementById('status');
+document.getElementById('best').textContent=best;
+let actx;
+function beep(i,dur=300){try{actx=actx||new (window.AudioContext||window.webkitAudioContext)();const o=actx.createOscillator(),g=actx.createGain();o.frequency.value=NOTE[i];o.type='sine';o.connect(g);g.connect(actx.destination);g.gain.setValueAtTime(.25,actx.currentTime);g.gain.exponentialRampToValueAtTime(.001,actx.currentTime+dur/1000);o.start();o.stop(actx.currentTime+dur/1000);}catch(e){}}
+function lit(i,dur=350){qs[i].classList.add('lit');beep(i,dur);setTimeout(()=>qs[i].classList.remove('lit'),dur);}
+function start(){seq=[];step=0;playing=true;document.getElementById('start').textContent='重新开始';nextRound();}
+function nextRound(){step=0;seq.push(Math.floor(Math.random()*4));statusEl.textContent='看好了…';playSeq();}
+function playSeq(){
+  playing=false;
+  let t=500;
+  seq.forEach((i,k)=>{setTimeout(()=>lit(i,k===seq.length-1?420:300),t);t+=420;});
+  setTimeout(()=>{playing=true;statusEl.textContent='该你了，按顺序点';},t+120);
+}
+qs.forEach(q=>q.onclick=()=>{
+  if(!playing)return;
+  const i=+q.dataset.i;lit(i,180);
+  if(i!==seq[step]){lose();return;}
+  step++;
+  if(step===seq.length){
+    playing=false;
+    document.getElementById('lvl').textContent=seq.length;
+    statusEl.textContent='✅ 过！下一关 +1';
+    setTimeout(()=>{if(seq.length>best){best=seq.length;localStorage.setItem('simonBest',best);document.getElementById('best').textContent=best;}nextRound();},700);
+  }
+});
+function lose(){
+  playing=false;
+  document.getElementById('lvl').textContent=seq.length-1;
+  statusEl.textContent='💥 记错了，到 '+ (seq.length-1) +' 关';
+  if(seq.length-1>best){best=seq.length-1;localStorage.setItem('simonBest',best);document.getElementById('best').textContent=best;}
+}
+document.getElementById('start').onclick=()=>{try{(actx=actx||new (window.AudioContext||window.webkitAudioContext)()).resume();}catch(e){}start();};
+</script>
+</body></html>

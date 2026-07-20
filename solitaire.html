@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>接龙 Solitaire</title>
+<style>
+:root{--bg:#1f6b3a;--card:#fff;--text:#1f2430;--accent:#4f46e5;--shadow:0 1px 3px rgba(0,0,0,.25)}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"PingFang SC","Microsoft YaHei",sans-serif;background:var(--bg);color:#fff;min-height:100vh;-webkit-font-smoothing:antialiased;display:flex;flex-direction:column;align-items:center}
+.wrap{width:100%;max-width:430px;padding:12px 8px 24px}
+.head{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
+h1{font-size:19px}
+.tools{display:flex;gap:6px}
+.tools button{border:none;background:rgba(255,255,255,.92);color:var(--text);font-weight:700;font-size:12px;padding:7px 10px;border-radius:9px;cursor:pointer}
+.tools button:active{transform:scale(.96)}
+.top{display:flex;gap:6px;justify-content:flex-start;margin-bottom:10px}
+.spacer{flex:1}
+.pile{width:46px;height:64px;border-radius:6px;position:relative}
+.pile.empty{border:2px solid rgba(255,255,255,.35);background:rgba(255,255,255,.08)}
+.stock{background:repeating-linear-gradient(45deg,#2b6cb0,#2b6cb0 6px,#3b7ec0 6px,#3b7ec0 12px);cursor:pointer}
+.stock::after{content:"↻";position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:24px;color:rgba(255,255,255,.8)}
+.col{position:relative;width:46px;min-height:64px}
+.tab{display:flex;gap:6px;justify-content:flex-start}
+.card{position:absolute;width:46px;height:64px;border-radius:6px;background:#fff;color:var(--text);border:1px solid #c9cdd6;box-shadow:var(--shadow);font-size:15px;font-weight:800;display:flex;align-items:flex-start;justify-content:flex-start;padding:3px 4px;cursor:pointer;user-select:none}
+.card .big{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:24px}
+.card.down{background:repeating-linear-gradient(45deg,#2b6cb0,#2b6cb0 6px,#3b7ec0 6px,#3b7ec0 12px);border:1px solid #255f9b}
+.card.red{color:#d12b2b}
+.card.sel{outline:3px solid #ffd23f;outline-offset:0;z-index:999!important}
+.msg{text-align:center;margin-top:12px;font-size:14px;font-weight:700;min-height:20px}
+.msg.win{color:#ffe27a}
+.hint{font-size:11px;color:rgba(255,255,255,.6);text-align:center;margin-top:6px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="head"><h1>🃏 接龙 Solitaire</h1>
+    <div class="tools"><button id="auto">🤖 自动归位</button><button id="new">🔄 新局</button></div>
+  </div>
+  <div class="top" id="top"></div>
+  <div class="tab" id="tab"></div>
+  <div class="msg" id="msg">点牌堆发牌 · 点牌选中，再点目标列移动 · 双击自动归位</div>
+  <div class="hint">目标：把 4 种花色从 A 到 K 收进右上角。列内需「红黑交替、数字递减」。</div>
+</div>
+<script>
+const SUITS=[{s:'♠',c:'b'},{s:'♥',c:'r'},{s:'♦',c:'r'},{s:'♣',c:'b'}];
+const RL={1:'A',11:'J',12:'Q',13:'K'};
+let stock,waste,found,tab,sel,finished;
+const topEl=document.getElementById('top'), tabEl=document.getElementById('tab'), msgEl=document.getElementById('msg');
+
+function rk(r){return RL[r]||r;}
+function suitIdx(suit){return SUITS.findIndex(x=>x.s===suit);}
+function shuffle(a){for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];}return a;}
+function buildDeck(){const d=[];let id=0;for(const su of SUITS)for(let r=1;r<=13;r++)d.push({id:id++,suit:su.s,color:su.c,rank:r,faceUp:false});return d;}
+function deal(){
+  const d=shuffle(buildDeck());stock=[];waste=[];found=[[],[],[],[]];tab=Array.from({length:7},()=>[]);
+  let k=0;for(let c=0;c<7;c++)for(let n=0;n<=c;n++){const card=d[k++];card.faceUp=(n===c);tab[c].push(card);}
+  while(k<d.length)stock.push(d[k++]);
+  sel=null;finished=false;setMsg('新牌局已发','');
+}
+function setMsg(t,cls){msgEl.textContent=t;msgEl.className='msg'+(cls?(' '+cls):'');}
+
+function flipExposed(col){const c=tab[col];if(c.length&&!c[c.length-1].faceUp)c[c.length-1].faceUp=true;}
+function canToTab(seq,t){const col=tab[t];if(!seq.length)return false;
+  if(col.length===0)return seq[0].rank===13;
+  const top=col[col.length-1];return top.faceUp&&top.color!==seq[0].color&&top.rank===seq[0].rank-1;}
+function canToFound(card,f){const pil=found[f];if(!pil.length)return card.rank===1;
+  const top=pil[pil.length-1];return top.suit===card.suit&&top.rank===card.rank-1;}
+
+function getSeq(){ // 当前 sel 对应的牌序列
+  if(!sel)return [];
+  if(sel.zone==='waste')return waste.length?[waste[waste.length-1]]:[];
+  if(sel.zone==='found')return found[sel.f].length?[found[sel.f][found[sel.f].length-1]]:[];
+  return tab[sel.col].slice(sel.idx);
+}
+function popSeq(){ // 从源移除当前 sel 序列，返回是否成功
+  if(sel.zone==='waste'){if(!waste.length)return false;waste.pop();return true;}
+  if(sel.zone==='found'){if(!found[sel.f].length)return false;found[sel.f].pop();return true;}
+  const col=tab[sel.col];if(sel.idx>=col.length)return false;col.splice(sel.idx);flipExposed(sel.col);return true;
+}
+
+function draw(){if(finished)return;if(stock.length){const c=stock.pop();c.faceUp=true;waste.push(c);}
+  else if(waste.length){while(waste.length){const c=waste.pop();c.faceUp=false;stock.push(c);}
+    if(stock.length){const c=stock.pop();c.faceUp=true;waste.push(c);}}
+  sel=null;render();}
+
+function selectTab(col,idx){const c=tab[col];if(idx>=c.length||!c[idx].faceUp)return;
+  let prev=null;for(let i=idx;i<c.length;i++){const card=c[i];if(!card.faceUp)return;
+    if(prev&&!(prev.color!==card.color&&prev.rank===card.rank+1))return;prev=card;}
+  sel={zone:'tab',col,idx};render();}
+
+function tryMoveToTab(t){if(!sel)return;const seq=getSeq();if(!seq.length)return;if(!canToTab(seq,t))return;
+  if(!popSeq())return;tab[t].push(...seq);sel=null;render();}
+function tryMoveToFound(f){if(!sel)return;const seq=getSeq();if(seq.length!==1)return;
+  const card=seq[0];if(f!==suitIdx(card.suit))return;if(!canToFound(card,f))return;
+  if(!popSeq())return;found[f].push(card);sel=null;checkWin();render();}
+function autoOne(card){const f=suitIdx(card.suit);if(canToFound(card,f))return f;return -1;}
+
+function dblAuto(zone,col,idx,f){let card=null,fromWaste=false,fromFound=-1;
+  if(zone==='waste'){if(!waste.length)return;card=waste[waste.length-1];fromWaste=true;}
+  else if(zone==='found'){if(!found[f].length)return;card=found[f][found[f].length-1];fromFound=f;}
+  else{if(idx>=tab[col].length||!tab[col][idx].faceUp)return;card=tab[col][idx];}
+  const fi=autoOne(card);if(fi<0)return;
+  if(fromWaste)waste.pop();else if(fromFound>=0)found[fromFound].pop();else{tab[col].splice(idx,1);flipExposed(col);}
+  found[fi].push(card);sel=null;checkWin();render();
+}
+
+function autoFinish(){if(finished)return;let moved=true;
+  while(moved){moved=false;
+    if(waste.length){const card=waste[waste.length-1];const f=suitIdx(card.suit);if(canToFound(card,f)){waste.pop();found[f].push(card);moved=true;continue;}}
+    for(let c=0;c<7;c++){const col=tab[c];if(col.length){const card=col[col.length-1];if(card.faceUp){const f=suitIdx(card.suit);if(canToFound(card,f)){col.pop();flipExposed(c);found[f].push(card);moved=true;break;}}}}
+  }
+  checkWin();render();
+}
+function checkWin(){const tot=found.reduce((s,a)=>s+a.length,0);if(tot===52){finished=true;setMsg('🎉 恭喜通关！','win');}else if(finished)finished=false;}
+
+function render(){
+  // top
+  let h='';
+  h+=`<div class="pile stock" data-zone="stock"></div>`;
+  h+=`<div class="pile ${waste.length?'':'empty'}" data-zone="waste">${waste.length?cardHTML(waste[waste.length-1],'waste',0,0,false):''}</div>`;
+  h+=`<div class="spacer"></div>`;
+  for(let f=0;f<4;f++){const pil=found[f];
+    h+=`<div class="pile ${pil.length?'':'empty'}" data-zone="found" data-f="${f}">${pil.length?cardHTML(pil[pil.length-1],'found',0,f,false):''}</div>`;}
+  topEl.innerHTML=h;
+  // tableau
+  let t='';
+  for(let c=0;c<7;c++){let y=0,col='';const arr=tab[c];
+    for(let i=0;i<arr.length;i++){const card=arr[i];const isSel=sel&&sel.zone==='tab'&&sel.col===c&&i>=sel.idx;
+      col+=cardHTML(card,'tab',c,i,y,isSel);y+=card.faceUp?24:12;}
+    t+=`<div class="col" data-zone="tab" data-col="${c}" style="height:${Math.max(64,y)}px">${col}</div>`;}
+  tabEl.innerHTML=t;
+}
+function cardHTML(card,zone,col,idx,y,selCls){
+  if(!card.faceUp)return `<div class="card down" data-zone="${zone}" data-col="${col}" data-idx="${idx}" style="top:${y}px"></div>`;
+  const red=card.color==='r'?'red':'';
+  const sel=selCls?'sel':'';
+  return `<div class="card ${red} ${sel}" data-zone="${zone}" data-col="${col}" data-idx="${idx}" style="top:${y}px">${rk(card.rank)}<span style="position:absolute;bottom:3px;right:4px;font-size:14px">${card.suit}</span><span class="big">${card.suit}</span></div>`;
+}
+
+document.addEventListener('click',e=>{
+  const el=e.target.closest('.card,.pile');if(!el)return;const zone=el.dataset.zone;
+  if(zone==='stock'){draw();return;}
+  if(sel){
+    if(zone==='found'){tryMoveToFound(+el.dataset.f);return;}
+    if(zone==='tab'){const c=+el.dataset.col,i=+el.dataset.idx;
+      if(sel.zone==='tab'&&sel.col===c&&sel.idx===i){sel=null;render();return;}
+      tryMoveToTab(c);return;}
+    if(zone==='waste'&&sel.zone!=='waste'){/* 取消 */sel=null;render();return;}
+  }
+  if(zone==='waste'){if(waste.length)sel={zone:'waste'};}
+  else if(zone==='found'){const f=+el.dataset.f;if(found[f].length)sel={zone:'found',f};}
+  else if(zone==='tab'){selectTab(+el.dataset.col,+el.dataset.idx);}
+  render();
+});
+document.addEventListener('dblclick',e=>{
+  const el=e.target.closest('.card');if(!el)return;const z=el.dataset.zone;
+  if(z==='waste')dblAuto('waste',0,0,0);
+  else if(z==='found')dblAuto('found',0,0,+el.dataset.f);
+  else if(z==='tab')dblAuto('tab',+el.dataset.col,+el.dataset.idx,0);
+});
+document.getElementById('new').addEventListener('click',deal);
+document.getElementById('auto').addEventListener('click',autoFinish);
+
+deal();render();
+</script>
+</body></html>

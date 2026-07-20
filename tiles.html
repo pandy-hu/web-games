@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<title>别踩白块 · Piano Tiles</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"PingFang SC","Microsoft YaHei",sans-serif;background:#eef0f6;color:#1f2430;display:flex;flex-direction:column;align-items:center;min-height:100vh;-webkit-font-smoothing:antialiased}
+h1{font-size:20px;margin-top:16px}
+.bar{display:flex;gap:8px;margin:12px 0;flex-wrap:wrap;justify-content:center}
+button{font:inherit;font-size:14px;font-weight:700;border:none;border-radius:10px;padding:9px 14px;background:#4f46e5;color:#fff;cursor:pointer}
+.stage{background:#fff;border-radius:16px;padding:12px;box-shadow:0 8px 22px rgba(20,20,40,.08);touch-action:none}
+canvas{display:block;border-radius:8px;background:#fff}
+.score{font-weight:800;font-size:15px;align-self:center;min-width:64px;text-align:center}
+.info{margin:10px 0 4px;color:#7b8190;font-size:13px;text-align:center}
+.hint{color:#9aa0ad;font-size:12px;margin-bottom:18px;text-align:center}
+</style>
+</head>
+<body>
+<h1>🎹 别踩白块</h1>
+<div class="bar">
+  <button id="start">▶ 开始</button>
+  <span class="score" id="score">0</span>
+</div>
+<div class="stage"><canvas id="cv"></canvas></div>
+<div class="info" id="info">点黑块得分，点白块或漏接到底即结束。</div>
+<div class="hint">黑块匀速下落，速度随分数加快。手机直接点，桌面用鼠标点。</div>
+
+<script>
+const cv=document.getElementById('cv');const ctx=cv.getContext('2d');
+const COLS=4, COLW=78, ROWH=120;
+cv.width=COLS*COLW; cv.height=ROWS=6*ROWH;
+let notes, speed, score, running, raf;
+const info=document.getElementById('info');
+const scoreEl=document.getElementById('score');
+
+function reset(){
+  notes=[]; speed=3.2; score=0; running=false; scoreEl.textContent='0';
+  let y=cv.height-ROWH;
+  while(y>-ROWH*3){notes.push({col:rndCol(),y,done:false});y-=ROWH;}
+  draw();info.textContent='点「开始」后黑块下落，点黑块得分。';
+}
+function rndCol(){return Math.floor(Math.random()*COLS);}
+function spawnTop(){
+  let minY=Infinity;for(const n of notes)minY=Math.min(minY,n.y);
+  while(minY>-ROWH*3){minY-=ROWH;notes.push({col:rndCol(),y:minY,done:false});}
+}
+function start(){if(running)return;running=true;info.textContent='';last=performance.now();raf=requestAnimationFrame(loop);}
+let last=0;
+function loop(t){
+  if(!running)return;
+  const dt=Math.min(40,t-last);last=t;
+  const step=speed*dt/16.6;
+  for(const n of notes)n.y+=step;
+  // 漏接检测：最底部未处理黑块越过底线
+  let over=false;
+  for(const n of notes){if(!n.done&&n.y>cv.height){over=true;break;}}
+  if(over){gameOver();return;}
+  spawnTop();
+  draw();
+  raf=requestAnimationFrame(loop);
+}
+function tap(x,y){
+  if(!running)return;
+  const col=Math.floor(x/COLW);
+  // 命中：该列、y 区间内的未处理黑块（取最靠下的一个）
+  let hit=null;
+  for(const n of notes){if(n.col===col&&!n.done&&y>=n.y-12&&y<=n.y+ROWH+12){if(!hit||n.y>hit.y)hit=n;}}
+  if(hit){hit.done=true;score++;scoreEl.textContent=score;
+    speed=Math.min(9.5,3.2+Math.floor(score/5)*0.5);
+    if(score%10===0)info.textContent='连击 '+score+'！加速中…';
+  }else{gameOver();}
+}
+function gameOver(){running=false;cancelAnimationFrame(raf);info.textContent='💥 结束！本局得分 '+score+'。点「开始」重来。';draw();}
+function draw(){
+  ctx.fillStyle='#fff';ctx.fillRect(0,0,cv.width,cv.height);
+  ctx.strokeStyle='#eef0f6';ctx.lineWidth=1;
+  for(let c=1;c<COLS;c++){ctx.beginPath();ctx.moveTo(c*COLW,0);ctx.lineTo(c*COLW,cv.height);ctx.stroke();}
+  for(const n of notes){
+    if(n.done)continue;
+    ctx.fillStyle='#1f2430';
+    ctx.fillRect(n.col*COLW+2,n.y+2,COLW-4,ROWH-4);
+  }
+}
+cv.addEventListener('pointerdown',e=>{
+  const r=cv.getBoundingClientRect();
+  const x=(e.clientX-r.left)/r.width*cv.width;
+  const y=(e.clientY-r.top)/r.height*cv.height;
+  if(!running){start();return;}
+  tap(x,y);
+});
+document.getElementById('start').onclick=()=>{if(!running){reset();start();}};
+reset();
+</script>
+</body></html>

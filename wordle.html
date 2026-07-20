@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<title>Wordle 猜词</title>
+<style>
+:root{--bg:#eef0f6;--card:#fff;--text:#1f2430;--sub:#7b8190;--accent:#4f46e5;--line:#d9dde6;--shadow:0 1px 3px rgba(20,20,40,.06),0 8px 22px rgba(20,20,40,.06);--green:#15a86b;--amber:#f59e0b;--gray:#9aa1ad;}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"PingFang SC","Microsoft YaHei",sans-serif;background:var(--bg);color:var(--text);min-height:100vh;display:flex;flex-direction:column;align-items:center}
+.bar{width:100%;max-width:480px;padding:10px 14px;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid var(--line);background:var(--card)}
+.bar a{color:var(--accent);text-decoration:none;font-weight:700;font-size:14px}
+.bar b{font-size:16px}
+.board{display:grid;grid-template-columns:repeat(5,1fr);gap:6px;margin:16px 0 8px;padding:0 12px;width:100%;max-width:340px}
+.cell{aspect-ratio:1;width:100%;border:2px solid var(--line);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:24px;font-weight:800;text-transform:uppercase;transition:.15s}
+.cell.fill{border-color:#b9bfcb;animation:pop .12s}
+.cell.reveal{transform:rotateX(90deg);animation:none}
+@keyframes pop{0%{transform:scale(.9)}100%{transform:scale(1)}}
+.cell.g{background:var(--green);color:#fff;border-color:var(--green)}
+.cell.y{background:var(--amber);color:#fff;border-color:var(--amber)}
+.cell.x{background:var(--gray);color:#fff;border-color:var(--gray)}
+.kb{width:100%;max-width:460px;padding:0 8px 14px;display:flex;flex-direction:column;gap:6px;align-items:center}
+.row{display:flex;gap:5px;justify-content:center;width:100%}
+.key{flex:1;max-width:34px;height:48px;border:none;border-radius:7px;background:#dbe0ea;font-weight:700;font-size:14px;cursor:pointer;color:var(--text);user-select:none}
+.key.wide{flex:1.5;max-width:54px;font-size:12px}
+.key.g{background:var(--green);color:#fff}
+.key.y{background:var(--amber);color:#fff}
+.key.x{background:var(--gray);color:#fff}
+.msg{min-height:20px;font-size:14px;font-weight:600;color:var(--accent);margin:2px 0 4px;text-align:center}
+.legend{display:flex;gap:10px;flex-wrap:wrap;justify-content:center;font-size:12px;color:var(--sub);max-width:340px;margin:0 auto}
+.legend i{width:14px;height:14px;border-radius:4px;display:inline-block;vertical-align:-2px;margin-right:4px}
+.toast{position:fixed;top:14px;left:50%;transform:translateX(-50%);background:#1f2430;color:#fff;padding:9px 16px;border-radius:10px;font-size:14px;opacity:0;transition:.2s;pointer-events:none;z-index:9}
+.toast.show{opacity:1}
+.btn{background:var(--accent);color:#fff;border:none;border-radius:10px;padding:9px 18px;font-weight:700;font-size:14px;cursor:pointer}
+.again{margin:6px 0 18px}
+/* intro overlay */
+.overlay{position:fixed;inset:0;background:rgba(20,20,40,.55);display:flex;align-items:center;justify-content:center;padding:18px;z-index:20}
+.overlay.hide{display:none}
+.panel{background:var(--card);border-radius:16px;padding:22px 20px;max-width:380px;width:100%;box-shadow:var(--shadow)}
+.panel h2{font-size:19px;margin-bottom:8px}
+.panel p{font-size:14px;color:var(--sub);line-height:1.7;margin-bottom:8px}
+.panel .lg{display:flex;flex-direction:column;gap:8px;margin:12px 0 16px}
+.panel .lg .it{display:flex;align-items:center;font-size:13px}
+.panel .it b{width:26px;height:26px;border-radius:6px;display:inline-flex;align-items:center;justify-content:center;color:#fff;font-weight:800;margin-right:10px;font-size:14px}
+.panel .b{width:100%;background:var(--accent);color:#fff;border:none;border-radius:10px;padding:12px;font-weight:800;font-size:15px;cursor:pointer}
+</style>
+</head>
+<body>
+<div class="bar"><a href="index.html">← 游戏厅</a><b>Wordle 猜词</b><a href="#" id="help">💡 提示</a></div>
+<div class="board" id="board"></div>
+<div class="msg" id="msg"></div>
+<div class="legend">
+  <span><i style="background:var(--green)"></i>绿=位置对</span>
+  <span><i style="background:var(--amber)"></i>黄=有此字母但位置错</span>
+  <span><i style="background:var(--gray)"></i>灰=不在词中</span>
+</div>
+<div class="kb" id="kb"></div>
+<button class="btn again" id="again" style="display:none">再玩一局</button>
+<div class="toast" id="toast"></div>
+
+<div class="overlay" id="ov">
+  <div class="panel">
+    <h2>🔤 Wordle 猜词 · 玩法</h2>
+    <p>在 <b>6 次</b> 内猜出一个 <b>5 字母英文单词</b>。每次猜完，格子会给出颜色提示：</p>
+    <div class="lg">
+      <div class="it"><b style="background:var(--green)">W</b> 字母正确且位置对</div>
+      <div class="it"><b style="background:var(--amber)">O</b> 词里有这个字母，但位置不对</div>
+      <div class="it"><b style="background:var(--gray)">R</b> 词里没有这个字母</div>
+    </div>
+    <p>👉 用屏幕键盘点按，或用电脑键盘直接打字。<b>回车 / Enter</b> 提交，<b>⌫</b> 删除。</p>
+    <button class="b" id="startBtn">开始游戏</button>
+  </div>
+</div>
+
+<script>
+const WORDS=["apple","beach","brain","bread","brush","chair","chart","chase","chest","chill","china","clean","clock","cloud","craft","crane","cream","crowd","dance","dream","drink","earth","field","flame","flash","fleet","floor","focus","frame","fresh","fruit","ghost","glass","globe","grace","grade","grain","grand","grape","grass","green","group","guard","happy","heart","horse","house","human","idea","image","juice","laugh","lemon","light","lucky","lunch","magic","maize","movie","music","night","ocean","olive","paint","paper","peace","phone","piano","pizza","plant","plate","power","pride","prize","queue","radio","rain","robot","rock","royal","salad","scale","scene","shade","shape","share","sharp","sheep","shine","shirt","shock","smile","snack","solar","sound","space","spice","sport","stack","star","steam","stone","store","storm","story","sugar","sunny","sweet","table","taste","teach","theme","thumb","tiger","toast","torch","trace","train","trend","trust","truth","uncle","union","unity","value","video","villa","viral","voice","water","wheat","win","window","world","youth","zebra"];
+const ANS=WORDS[Math.floor(Math.random()*WORDS.length)];
+const board=document.getElementById('board');
+const kb=document.getElementById('kb');
+const msg=document.getElementById('msg');
+const toast=document.getElementById('toast');
+let row=0,col=0,cur="",done=false,started=false,keyState={};
+const layout=["qwertyuiop","asdfghjkl","zxcvbnm"];
+for(let r=0;r<6;r++){for(let c=0;c<5;c++){const d=document.createElement('div');d.className='cell';d.id='c'+r+c;board.appendChild(d);}}
+layout.forEach((l,i)=>{const rowEl=document.createElement('div');rowEl.className='row';if(i===2){const sp=document.createElement('button');sp.className='key wide';sp.textContent='Enter';sp.onclick=submit;rowEl.appendChild(sp);}l.split('').forEach(ch=>{const k=document.createElement('button');k.className='key';k.textContent=ch;k.id='k'+ch;k.onclick=()=>type(ch);rowEl.appendChild(k);});if(i===2){const bk=document.createElement('button');bk.className='key wide';bk.innerHTML='⌫';bk.onclick=del;rowEl.appendChild(bk);}kb.appendChild(rowEl);});
+function show(t){toast.textContent=t;toast.classList.add('show');clearTimeout(show._t);show._t=setTimeout(()=>toast.classList.remove('show'),1400);}
+function setMsg(){msg.textContent='首字母提示：'+ANS[0].toUpperCase()+' …… 用下方键盘猜（6 次机会）';}
+function type(ch){if(done||!started||col>4)return;const c=document.getElementById('c'+row+col);c.textContent=ch;c.classList.add('fill');cur+=ch;col++;}
+function del(){if(done||!started||col===0)return;col--;cur=cur.slice(0,-1);const c=document.getElementById('c'+row+col);c.textContent='';c.classList.remove('fill');}
+function paintKey(ch,cls){const k=document.getElementById('k'+ch);if(!k)return;const rank={x:1,y:2,g:3};if(!k.dataset.r||rank[cls]>rank[k.dataset.r]){k.classList.remove('x','y','g');k.classList.add(cls);k.dataset.r=cls;}}
+function submit(){if(done||!started)return;if(cur.length<5){show('要猜满 5 个字母');return;}const g=cur;let res=Array(5).fill('x');const cnt={};for(const ch of ANS)cnt[ch]=(cnt[ch]||0)+1;for(let i=0;i<5;i++)if(g[i]===ANS[i]){res[i]='g';cnt[g[i]]--;}for(let i=0;i<5;i++)if(res[i]!=='g'&&cnt[g[i]]>0){res[i]='y';cnt[g[i]]--;}
+for(let i=0;i<5;i++){const cell=document.getElementById('c'+row+i);cell.classList.add('reveal');setTimeout(()=>{cell.classList.add(res[i]);cell.classList.remove('reveal');},120);paintKey(g[i],res[i]);}
+if(g===ANS){msg.textContent='🎉 猜对了！答案 '+ANS.toUpperCase();done=true;document.getElementById('again').style.display='block';return;}
+row++;col=0;cur="";
+if(row>=6){msg.textContent='答案：'+ANS.toUpperCase();done=true;document.getElementById('again').style.display='block';return;}
+msg.textContent='第 '+(row+1)+' 次，继续猜（首字母 '+ANS[0].toUpperCase()+'）';
+}
+document.getElementById('startBtn').onclick=()=>{document.getElementById('ov').classList.add('hide');started=true;setMsg();};
+document.addEventListener('keydown',e=>{if(!started)return;if(e.key==='Enter')submit();else if(e.key==='Backspace')del();else if(/^[a-zA-Z]$/.test(e.key))type(e.key.toLowerCase());});
+document.getElementById('again').onclick=()=>location.reload();
+document.getElementById('help').onclick=e=>{e.preventDefault();if(!started){show('点「开始游戏」后，看首字母提示');return;}show('首字母是 '+ANS[0].toUpperCase());};
+</script>
+</body></html>

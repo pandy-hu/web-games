@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<title>太空侵略者</title>
+<style>
+:root{--bg:#eef0f6;--card:#fff;--text:#1f2430;--sub:#7b8190;--accent:#4f46e5;--line:#d9dde6;--shadow:0 1px 3px rgba(20,20,40,.06),0 8px 22px rgba(20,20,40,.06);}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"PingFang SC","Microsoft YaHei",sans-serif;background:var(--bg);color:var(--text);min-height:100vh;display:flex;flex-direction:column;align-items:center}
+.bar{width:100%;max-width:560px;padding:10px 14px;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid var(--line);background:var(--card)}
+.bar a{color:var(--accent);text-decoration:none;font-weight:700;font-size:14px}
+.bar b{font-size:16px}
+.wrap{width:100%;max-width:560px;padding:14px}
+canvas{width:100%;background:var(--card);border-radius:14px;box-shadow:var(--shadow);display:block;touch-action:none}
+.meta{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;font-size:14px;color:var(--sub)}
+.meta b{color:var(--text);font-size:18px}
+.btn{background:var(--accent);color:#fff;border:none;border-radius:10px;padding:9px 18px;font-weight:700;font-size:14px;cursor:pointer}
+.crtl{display:flex;gap:10px;justify-content:center;margin-top:12px}
+.ctrl{flex:1;max-width:160px;height:54px;border:none;border-radius:12px;background:var(--card);box-shadow:var(--shadow);font-size:22px;font-weight:700;color:var(--accent)}
+.hint{text-align:center;color:var(--sub);font-size:13px;margin-top:10px}
+</style>
+</head>
+<body>
+<div class="bar"><a href="index.html">← 游戏厅</a><b>太空侵略者</b><b>关 <span id="lvl">1</span></b></div>
+<div class="wrap">
+  <div class="meta"><span>得分 <b id="score">0</b></span><span>剩余生命 <b id="lives">3</b></span><button class="btn" id="start">开始</button></div>
+  <canvas id="cv" width="560" height="400"></canvas>
+  <div class="crtl"><button class="ctrl" id="left">◀</button><button class="ctrl" id="fire">🔥</button><button class="ctrl" id="right">▶</button></div>
+  <p class="hint">← → 移动，空格开火（手机用下方按钮）。消灭全部敌人进入下一关。</p>
+</div>
+<script>
+const cv=document.getElementById('cv'),ctx=cv.getContext('2d');
+const W=cv.width,H=cv.height;
+let ship,aliens,ab,pb,dir,spd,lives,score,level,raf,running,bulletCD;
+function rowCols(){const cols=8,rows=4;aliens=[];for(let r=0;r<rows;r++)for(let c=0;c<cols;c++)aliens.push({x:60+c*56,y:40+r*42,alive:true,w:34,h:24,c:['#e23b3b','#f59e0b','#4f46e5','#15a86b'][r%4]});}
+function reset(){ship={x:W/2-18,y:H-40,w:36,h:20};ab=null;pb=null;dir=1;spd=0.6;lives=3;score=0;level=1;bulletCD=0;running=true;rowCols();updateHUD();}
+function updateHUD(){document.getElementById('score').textContent=score;document.getElementById('lives').textContent=lives;document.getElementById('lvl').textContent=level;}
+function fire(){if(bulletCD>0||!running)return;pb={x:ship.x+ship.w/2-2,y:ship.y-6,w:4,h:12};bulletCD=14;}
+function step(){
+  if(!running)return;if(bulletCD>0)bulletCD--;
+  ctx.clearRect(0,0,W,H);
+  // ship
+  ctx.fillStyle='#2f3542';ctx.fillRect(ship.x,ship.y,ship.w,ship.h);
+  ctx.fillStyle='#4f46e5';ctx.fillRect(ship.x+ship.w/2-4,ship.y-8,8,8);
+  // aliens move
+  let hitEdge=false,lowest=0;let anyAlive=false;
+  for(const a of aliens){if(a.alive){anyAlive=true;if(a.x<=8||a.x+a.w>=W-8)hitEdge=true;if(a.y+a.h>lowest)lowest=a.y+a.h;}}
+  if(hitEdge){dir*=-1;for(const a of aliens)if(a.alive)a.y+=22;}
+  for(const a of aliens){if(!a.alive)continue;a.x+=dir*spd;ctx.fillStyle=a.c;ctx.fillRect(a.x,a.y,a.w,a.h);}
+  if(lowest>=ship.y){return gameOver('被攻陷了');}
+  // player bullet
+  if(pb){pb.y-=9;ctx.fillStyle='#e23b3b';ctx.fillRect(pb.x,pb.y,pb.w,pb.h);
+    for(const a of aliens){if(a.alive&&pb.x<a.x+a.w&&pb.x> a.x-4&&pb.y<a.y+a.h&&pb.y> a.y-pb.h){a.alive=false;score+=10;pb=null;break;}}
+    if(pb&&pb.y<0)pb=null;}
+  // alien bullets
+  if(Math.random()<0.04&&!ab){const live=aliens.filter(a=>a.alive);if(live.length){const s=live[Math.floor(Math.random()*live.length)];ab={x:s.x+s.w/2,y:s.y+s.h,w:4,h:10};}}
+  if(ab){ab.y+=4.5;ctx.fillStyle='#f59e0b';ctx.fillRect(ab.x,ab.y,ab.w,ab.h);
+    if(ab.x<ship.x+ship.w&&ab.x> ship.x-4&&ab.y>ship.y&&ab.y<ship.y+ship.h){lives--;ab=null;updateHUD();if(lives<=0)return gameOver('生命耗尽');}
+    if(ab&&ab.y>H)ab=null;}
+  if(!anyAlive){level++;spd+=0.35;rowCols();updateHUD();}
+  raf=requestAnimationFrame(step);
+}
+function gameOver(t){running=false;ctx.fillStyle='#1f2430';ctx.font='bold 22px sans-serif';ctx.textAlign='center';ctx.fillText(t,W/2,H/2);ctx.font='14px sans-serif';ctx.fillText('最终得分 '+score,W/2,H/2+26);}
+function move(d){if(!running)return;ship.x+=d;ship.x=Math.max(8,Math.min(W-ship.w-8,ship.x));}
+document.getElementById('start').onclick=()=>{cancelAnimationFrame(raf);reset();step();};
+document.getElementById('left').onclick=()=>move(-22);
+document.getElementById('right').onclick=()=>move(22);
+document.getElementById('fire').onclick=fire;
+document.addEventListener('keydown',e=>{if(e.code==='ArrowLeft')move(-22);else if(e.code==='ArrowRight')move(22);else if(e.code==='Space'){e.preventDefault();fire();}});
+// touch drag on canvas
+let dragging=false,lastX=0;
+cv.addEventListener('pointerdown',e=>{dragging=true;lastX=e.clientX;});
+cv.addEventListener('pointermove',e=>{if(dragging){move((e.clientX-lastX>0?1:-1)*Math.abs(e.clientX-lastX)*0.5);lastX=e.clientX;}});
+cv.addEventListener('pointerup',()=>{dragging=false;});
+</script>
+</body></html>
