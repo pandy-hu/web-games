@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>元宝 · AI 机会简报 | 免费看热点，付费抓机会</title>
+<style>
+  :root{
+    --bg:#0f1020; --bg2:#1a1b3a; --card:#1c1d3a; --card2:#23254d;
+    --txt:#eef0ff; --sub:#aab0d8; --line:#2c2e5a;
+    --accent:#7c5cff; --accent2:#22d3ee; --gold:#ffd166; --green:#34d399;
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"PingFang SC","Microsoft YaHei",sans-serif;
+    background:radial-gradient(1200px 600px at 80% -10%,#2a1f5e 0%,transparent 60%),var(--bg);color:var(--txt);line-height:1.6}
+  a{color:inherit;text-decoration:none}
+  .wrap{max-width:760px;margin:0 auto;padding:0 18px 60px}
+  /* hero */
+  .hero{padding:54px 18px 30px;text-align:center;background:linear-gradient(180deg,#191a3e 0%,rgba(25,26,62,0) 100%)}
+  .badge{display:inline-block;font-size:12px;color:var(--accent2);border:1px solid var(--line);border-radius:999px;padding:4px 12px;margin-bottom:16px;letter-spacing:.5px}
+  .hero h1{font-size:30px;line-height:1.3;margin:0 0 12px;font-weight:800}
+  .hero h1 .hl{background:linear-gradient(90deg,var(--accent),var(--accent2));-webkit-background-clip:text;background-clip:text;color:transparent}
+  .hero p{color:var(--sub);font-size:15px;margin:0 auto 22px;max-width:520px}
+  .cta-row{display:flex;gap:12px;justify-content:center;flex-wrap:wrap}
+  .btn{padding:13px 22px;border-radius:14px;font-weight:700;font-size:15px;transition:.2s;display:inline-block}
+  .btn.primary{background:linear-gradient(90deg,var(--accent),#9b7bff);color:#fff;box-shadow:0 8px 24px rgba(124,92,255,.35)}
+  .btn.ghost{background:transparent;color:var(--txt);border:1px solid var(--line)}
+  .btn:active{transform:scale(.97)}
+  /* stats */
+  .stats{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin:30px 0}
+  .stat{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:16px 10px;text-align:center}
+  .stat b{display:block;font-size:22px;color:var(--accent2)}
+  .stat span{font-size:12px;color:var(--sub)}
+  /* section */
+  .sec-title{font-size:20px;font-weight:800;margin:38px 0 6px;display:flex;align-items:center;gap:8px}
+  .sec-sub{color:var(--sub);font-size:13px;margin:0 0 18px}
+  /* compare */
+  .cmp{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+  .col{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:18px;position:relative;overflow:hidden}
+  .col.paid{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent) inset}
+  .col h3{margin:0 0 4px;font-size:17px}
+  .col .price{font-size:26px;font-weight:800;margin:6px 0 2px}
+  .col .price small{font-size:13px;color:var(--sub);font-weight:500}
+  .col ul{list-style:none;padding:0;margin:14px 0 0;font-size:13.5px;color:var(--sub)}
+  .col ul li{padding:7px 0;border-top:1px dashed var(--line);display:flex;gap:8px}
+  .col ul li .y{color:var(--green)}
+  .col ul li .n{color:#5b5f8a}
+  .tag{position:absolute;top:14px;right:-30px;transform:rotate(40deg);background:var(--accent);color:#fff;font-size:11px;padding:4px 34px;font-weight:700}
+  /* plans */
+  .plans{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-top:8px}
+  .plan{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:18px 14px;text-align:center}
+  .plan.best{border-color:var(--gold);box-shadow:0 0 0 1px var(--gold) inset;background:linear-gradient(180deg,#26214a,#1c1d3a)}
+  .plan .nm{font-weight:700;font-size:15px}
+  .plan .pr{font-size:24px;font-weight:800;margin:8px 0;color:var(--gold)}
+  .plan .pr.free{color:var(--green)}
+  .plan .ds{font-size:12px;color:var(--sub);min-height:32px}
+  .plan .btn{width:100%;margin-top:12px;padding:11px 0;font-size:14px}
+  /* sample teaser */
+  .teaser{background:linear-gradient(135deg,#1d1f44,#241b46);border:1px solid var(--line);border-radius:18px;padding:18px}
+  .teaser h4{margin:0 0 12px;font-size:15px;color:var(--accent2)}
+  .t-item{display:flex;gap:10px;padding:10px 0;border-top:1px solid var(--line);font-size:13.5px}
+  .t-item:first-of-type{border-top:none}
+  .t-item .ic{font-size:18px;flex:none}
+  .t-item b{color:var(--gold)}
+  .teaser .more{margin-top:14px;text-align:center}
+  /* faq */
+  .faq{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px 16px;margin-bottom:10px}
+  .faq q{font-weight:700;font-size:14px;display:block;margin-bottom:4px}
+  .faq p{margin:0;font-size:13px;color:var(--sub)}
+  /* final cta */
+  .final{margin-top:34px;text-align:center;background:linear-gradient(135deg,#2a1f5e,#1a1b3a);border:1px solid var(--line);border-radius:20px;padding:28px 20px}
+  .final h3{margin:0 0 8px;font-size:20px}
+  .final p{color:var(--sub);font-size:13.5px;margin:0 0 18px}
+  .foot{text-align:center;color:#6b6f9a;font-size:12px;margin-top:30px;line-height:1.8}
+</style>
+</head>
+<body>
+<header class="hero">
+  <span class="badge">每日 AI · 副业 · 财经 · 信息差</span>
+  <h1>每天 3 分钟<br><span class="hl">免费看热点，付费抓机会</span></h1>
+  <p>一份帮你把「新闻」翻译成「钱」的早报。免费版看世界发生了什么，付费版告诉你——这事跟你有什么关系、今天能怎么用。</p>
+  <div class="cta-row">
+    <a class="btn primary" id="ctaSample" href="briefing-sample.html">免费看示例 →</a>
+    <a class="btn ghost" id="ctaSub" href="#">订阅付费版</a>
+  </div>
+</header>
+
+<div class="wrap">
+  <div class="stats">
+    <div class="stat"><b>15+</b><span>每日精选热点</span></div>
+    <div class="stat"><b>6</b><span>覆盖领域</span></div>
+    <div class="stat"><b>🌍</b><span>中外双源交叉</span></div>
+  </div>
+
+  <div class="sec-title">📋 免费版 vs 付费版</div>
+  <p class="sec-sub">同样的 15 条热点，付费版多出「机会翻译层」。</p>
+  <div class="cmp">
+    <div class="col">
+      <h3>免费版</h3>
+      <div class="price">¥0 <small>/ 永久</small></div>
+      <ul>
+        <li><span class="y">✓</span> 每日 15 条热点速览</li>
+        <li><span class="y">✓</span> 标题 + 一句话摘要 + 来源</li>
+        <li><span class="y">✓</span> 领域标签 + 爆款潜力</li>
+        <li><span class="y">✓</span> 中文 + 海外翻译</li>
+        <li><span class="n">✕</span> 机会解读 / 副业启示</li>
+        <li><span class="n">✕</span> 信息差挖掘</li>
+        <li><span class="n">✕</span> 每周深度趋势报告</li>
+      </ul>
+    </div>
+    <div class="col paid">
+      <div class="tag">推荐</div>
+      <h3>付费版</h3>
+      <div class="price">¥19 <small>/ 月 · ¥199 / 年</small></div>
+      <ul>
+        <li><span class="y">✓</span> 免费版全部内容</li>
+        <li><span class="y">✓</span> 💡 每条重点的「副业 / 变现启示」</li>
+        <li><span class="y">✓</span> 🔍 「信息差」：多数人没注意的落差</li>
+        <li><span class="y">✓</span> ✅ 「今日可操作」：今天就能做的一件小事</li>
+        <li><span class="y">✓</span> 📌 每日「机会清单」Top 3</li>
+        <li><span class="y">✓</span> 📈 每周深度趋势报告（PDF）</li>
+        <li><span class="y">✓</span> 历史归档可检索</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="sec-title">💎 三档方案</div>
+  <div class="plans">
+    <div class="plan">
+      <div class="nm">免费版</div>
+      <div class="pr free">¥0</div>
+      <div class="ds">看热点，建立信息源</div>
+      <a class="btn ghost" id="planFree" href="briefing-sample.html">看示例</a>
+    </div>
+    <div class="plan best">
+      <div class="nm">付费 · 月</div>
+      <div class="pr">¥19<span style="font-size:13px;color:var(--sub)">/月</span></div>
+      <div class="ds">抓机会，每天多知道一点</div>
+      <a class="btn primary" id="planMonth" href="#">订阅月付</a>
+    </div>
+    <div class="plan">
+      <div class="nm">付费 · 年</div>
+      <div class="pr">¥199<span style="font-size:13px;color:var(--sub)">/年</span></div>
+      <div class="ds">省两个月，送周报归档</div>
+      <a class="btn ghost" id="planYear" href="#">订阅年付</a>
+    </div>
+  </div>
+
+  <div class="sec-title">🔥 付费版长什么样（今日真实示例）</div>
+  <p class="sec-sub">下面是从今天简报里抽的 3 条「机会翻译」，完整版点「免费看示例」。</p>
+  <div class="teaser">
+    <h4>2026-07-23 付费版 · 机会翻译（节选）</h4>
+    <div class="t-item"><span class="ic">🤖</span><div><b>自主机器人连续工作 8 天</b>：Figure/Atlas 从「会重复动作的工具」变成「能感知推理的智能体」。 <br><span style="color:var(--gold)">副业启示：</span>机器人训练数据标注、运维代运营需求会先爆发，普通人可接标注单。</div></div>
+    <div class="t-item"><span class="ic">🌐</span><div><b>世界模型成资本风口</b>：智象未来 15 亿 C 轮、爱诗智能 29.8 亿 C 轮。 <br><span style="color:var(--gold)">信息差：</span>多数人盯模型参数，真正赚钱的是「产业落地订单」和「内容生成基建」。</div></div>
+    <div class="t-item"><span class="ic">💰</span><div><b>副业信息差扎堆</b>：AI 工具中介、闲鱼无货源、虚拟资料搬运。 <br><span style="color:var(--gold)">今日可操作：</span>今晚去闲鱼搜「代 XX」，找 3 个有成交但供给少的类目挂单。</div></div>
+    <div class="more"><a class="btn primary" href="briefing-sample.html">看完整付费版示例 →</a></div>
+  </div>
+
+  <div class="sec-title">❓ 常见问题</div>
+  <div class="faq"><q>付费版和免费版什么时候发？</q><p>每天早 9 点生成，免费版公开推送；付费版同步生成，订阅用户通过邮件 / 知识星球接收。</p></div>
+  <div class="faq"><q>内容是怎么来的？</q><p>8 路并行检索（中文 5 路 + 海外 3 路），筛选最具话题性与爆款潜力的内容，海外新闻翻译为中文。付费版在此基础上叠加「机会翻译层」。</p></div>
+  <div class="faq"><q>不适合我能退吗？</q><p>月付随时可停；年付首周不满意可全额退。先点「免费看示例」体验付费版格式再决定。</p></div>
+  <div class="faq"><q>和游戏合集什么关系？</q><p>同一作者出品。玩游戏放松，看简报搞钱——一个帮你杀时间，一个帮你赚时间。</p></div>
+
+  <div class="final">
+    <h3>先免费看一眼，再决定要不要付费</h3>
+    <p>一份用真实新闻写成的付费版示例，30 秒看完就知道值不值。</p>
+    <div class="cta-row">
+      <a class="btn primary" href="briefing-sample.html">免费看示例 →</a>
+      <a class="btn ghost" id="ctaSub2" href="#">立即订阅付费版</a>
+    </div>
+  </div>
+
+  <div class="foot">
+    元宝 · AI 机会简报 ｜ 由 WorkBuddy 自动生成<br>
+    合作 / 反馈：<a id="contactLink" href="#">联系作者</a>
+  </div>
+</div>
+
+<script>
+/* ====== 在此配置你的付费转化入口（订阅链接、二维码、联系方式） ====== */
+window.BRIEFING = {
+  paidMonthlyURL: "https://t.zsxq.com/你的知识星球",   // 月付订阅链接
+  paidYearlyURL:  "https://t.zsxq.com/你的知识星球年付", // 年付订阅链接
+  freeSampleURL:  "briefing-sample.html",
+  contactURL:     "https://workbuddy.cn",              // 联系/客服
+  qrImage:        ""                                     // 可选：公众号/客服二维码图片地址
+};
+(function(){
+  var B = window.BRIEFING || {};
+  function set(id, url){ var el=document.getElementById(id); if(el && url) el.href = url; }
+  set('ctaSub', B.paidMonthlyURL);
+  set('ctaSub2', B.paidMonthlyURL);
+  set('planMonth', B.paidMonthlyURL);
+  set('planYear', B.paidYearlyURL);
+  set('planFree', B.freeSampleURL);
+  set('contactLink', B.contactURL);
+  set('ctaSample', B.freeSampleURL);
+})();
+</script>
+</body>
+</html>
