@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<title>中国象棋 · Xiangqi</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"PingFang SC","Microsoft YaHei",sans-serif;background:#eef0f6;color:#1f2430;display:flex;flex-direction:column;align-items:center;min-height:100vh;-webkit-font-smoothing:antialiased;padding:14px 10px 24px}
+h1{font-size:20px;margin-bottom:6px}
+.status{font-size:14px;font-weight:700;margin:8px 0;min-height:22px;text-align:center}
+.status .r{color:#e23b3b}.status .b{color:#1f2430}
+.bar{display:flex;gap:8px;margin:6px 0 10px;flex-wrap:wrap;justify-content:center}
+button{font:inherit;font-size:14px;font-weight:700;border:none;border-radius:10px;padding:9px 14px;background:#4f46e5;color:#fff;box-shadow:0 2px 6px rgba(79,70,229,.3);cursor:pointer}
+button.sec{background:#fff;color:#4f46e5;box-shadow:0 1px 3px rgba(0,0,0,.08)}
+.board{position:relative;width:100%;max-width:370px;aspect-ratio:9/10;background:#f6d9a8;border:3px solid #7a5230;border-radius:8px;box-shadow:0 8px 22px rgba(20,20,40,.12);touch-action:manipulation}
+.board svg{position:absolute;inset:0;width:100%;height:100%}
+.piece{position:absolute;transform:translate(-50%,-50%);width:clamp(26px,8.6vw,36px);height:clamp(26px,8.6vw,36px);border-radius:50%;border:2px solid #7a5230;background:radial-gradient(circle at 35% 30%,#fff,#f2e2c4);display:flex;align-items:center;justify-content:center;font-size:clamp(15px,4.6vw,21px);font-weight:800;cursor:pointer;user-select:none;box-shadow:0 1px 2px rgba(0,0,0,.25);transition:transform .08s}
+.piece.red{color:#e23b3b}
+.piece.black{color:#1f2430}
+.piece.sel{background:radial-gradient(circle at 35% 30%,#fff,#ffe39a);box-shadow:0 0 0 3px #4f46e5,0 1px 2px rgba(0,0,0,.25);transform:translate(-50%,-50%) scale(1.06)}
+.piece.last{box-shadow:0 0 0 3px #15a86b,0 1px 2px rgba(0,0,0,.25)}
+.hint{color:#9aa0ad;font-size:12px;margin-top:10px;text-align:center;max-width:360px}
+</style>
+</head>
+<body>
+<h1>♟️ 中国象棋 Xiangqi</h1>
+<div class="status" id="status"></div>
+<div class="bar">
+  <button class="sec" id="undo">↶ 悔棋</button>
+  <button class="sec" id="restart">↻ 重开</button>
+  <button class="sec" id="flip">⇅ 翻转视角</button>
+</div>
+<div class="board" id="board"></div>
+<div class="hint">红先黑后，点己方棋子再点目标格落子。含将军 / 将死 / 困毙判定与悔棋。双人本地对战。</div>
+
+<script>
+// ---------- 棋盘模型 ----------
+// board[r][c] = null | {t, s}  t:R车 H马 E相/象 A士/仕 K将/帅 C炮 P兵/卒  s:r红 b黑
+// 行 0 在最上方(黑方)，行 9 在最下方(红方)
+let board, turn, selected, history, lastMove, gameOver, flipped;
+
+const CH = {
+  r:{K:'帅',A:'仕',E:'相',H:'馬',R:'車',C:'炮',P:'兵'},
+  b:{K:'將',A:'士',E:'象',H:'馬',R:'車',C:'砲',P:'卒'}
+};
+
+function inBoard(r,c){return r>=0&&r<10&&c>=0&&c<9;}
+function at(bd,r,c){return inBoard(r,c)?bd[r][c]:null;}
+function opp(s){return s==='r'?'b':'r';}
+
+function initBoard(){
+  const b = Array.from({length:10},()=>Array(9).fill(null));
+  const back = ['R','H','E','A','K','A','E','H','R'];
+  for(let c=0;c<9;c++){ b[0][c]={t:back[c],s:'b'}; b[9][c]={t:back[c],s:'r'}; }
+  b[2][1]={t:'C',s:'b'}; b[2][7]={t:'C',s:'b'};
+  b[7][1]={t:'C',s:'r'}; b[7][7]={t:'C',s:'r'};
+  for(let c=0;c<9;c+=2){ b[3][c]={t:'P',s:'b'}; b[6][c]={t:'P',s:'r'}; }
+  return b;
+}
+
+// ---------- 走子规则（伪合法，不含将军限制） ----------
+function pseudo(bd,r,c){
+  const p=bd[r][c]; if(!p) return [];
+  const s=p.s, mv=[];
+  const add=(nr,nc)=>{ if(!inBoard(nr,nc))return; const q=bd[nr][nc]; if(q&&q.s===s)return; mv.push([nr,nc]); };
+  const dirs=[[1,0],[-1,0],[0,1],[0,-1]];
+  if(p.t==='R'||p.t==='K'){
+    if(p.t==='R'){ for(const[dr,dc]of dirs){ let nr=r+dr,nc=c+dc; while(inBoard(nr,nc)){ const q=bd[nr][nc]; if(!q){mv.push([nr,nc]);} else { if(q.s!==s)mv.push([nr,nc]); break; } nr+=dr;nc+=dc; } } }
+    if(p.t==='K'){ for(const[dr,dc]of dirs){ let nr=r+dr,nc=c+dc; if(inBoard(nr,nc)&&nc>=3&&nc<=5){ if(s==='r'&&nr>=7&&nr<=9)add(nr,nc); if(s==='b'&&nr>=0&&nr<=2)add(nr,nc);} } }
+  } else if(p.t==='C'){
+    for(const[dr,dc]of dirs){ let nr=r+dr,nc=c+dc,screen=0; while(inBoard(nr,nc)){ const q=bd[nr][nc]; if(!q){ if(screen===0)mv.push([nr,nc]); } else { if(screen===0){screen=1;} else { if(q.s!==s)mv.push([nr,nc]); break; } } nr+=dr;nc+=dc; } }
+  } else if(p.t==='H'){
+    const m=[[2,1],[2,-1],[-2,1],[-2,-1],[1,2],[1,-2],[-1,2],[-1,-2]];
+    for(const[dr,dc]of m){ const nr=r+dr,nc=c+dc; if(!inBoard(nr,nc))continue; const q=bd[nr][nc]; if(q&&q.s===s)continue;
+      const lr = Math.abs(dr)===2 ? r+dr/2 : r, lc = Math.abs(dc)===2 ? c+dc/2 : c; if(bd[lr][lc])continue; mv.push([nr,nc]); }
+  } else if(p.t==='E'){
+    const m=[[2,2],[2,-2],[-2,2],[-2,-2]];
+    for(const[dr,dc]of m){ const nr=r+dr,nc=c+dc; if(!inBoard(nr,nc))continue; if(s==='r'&&nr<5)continue; if(s==='b'&&nr>4)continue; const q=bd[nr][nc]; if(q&&q.s===s)continue; if(bd[r+dr/2][c+dc/2])continue; mv.push([nr,nc]); }
+  } else if(p.t==='A'){
+    const m=[[1,1],[1,-1],[-1,1],[-1,-1]];
+    for(const[dr,dc]of m){ const nr=r+dr,nc=c+dc; if(!inBoard(nr,nc))continue; if(nc<3||nc>5)continue; if(s==='r'&&(nr<7||nr>9))continue; if(s==='b'&&(nr<0||nr>2))continue; const q=bd[nr][nc]; if(q&&q.s===s)continue; mv.push([nr,nc]); }
+  } else if(p.t==='P'){
+    const fwd = s==='r'?-1:1; add(r+fwd,c);
+    const crossed = s==='r' ? r<=4 : r>=5;
+    if(crossed){ add(r,c-1); add(r,c+1); }
+  }
+  return mv;
+}
+
+// ---------- 被攻击判定 ----------
+function attackedBy(bd,r,c,by){
+  // 车 / 炮 / 将(飞将)
+  for(const[dr,dc]of[[1,0],[-1,0],[0,1],[0,-1]]){
+    let k=1,screen=0;
+    while(true){ const nr=r+dr*k,nc=c+dc*k; if(!inBoard(nr,nc))break; const q=bd[nr][nc];
+      if(q){ if(screen===0){ if(q.s===by&&(q.t==='R'||q.t==='K'))return true; screen=1; } else { if(q.s===by&&q.t==='C')return true; break; } }
+      k++; }
+  }
+  // 马
+  const hm=[[2,1],[2,-1],[-2,1],[-2,-1],[1,2],[1,-2],[-1,2],[-1,-2]];
+  for(const[dr,dc]of hm){ const hr=r+dr,hc=c+dc; if(!inBoard(hr,hc))continue; const q=bd[hr][hc]; if(!q||q.s!==by||q.t!=='H')continue;
+    const lr=Math.abs(dr)===2?hr-dr/2:hr, lc=Math.abs(dc)===2?hc-dc/2:hc; if(bd[lr][lc])continue; return true; }
+  // 兵 / 卒
+  if(by==='r'){
+    if(at(bd,r+1,c)&&bd[r+1][c].s==='r'&&bd[r+1][c].t==='P')return true;
+    if(r<=4){ if(at(bd,r,c+1)&&bd[r][c+1].s==='r'&&bd[r][c+1].t==='P')return true; if(at(bd,r,c-1)&&bd[r][c-1].s==='r'&&bd[r][c-1].t==='P')return true; }
+  } else {
+    if(at(bd,r-1,c)&&bd[r-1][c].s==='b'&&bd[r-1][c].t==='P')return true;
+    if(r>=5){ if(at(bd,r,c+1)&&bd[r][c+1].s==='b'&&bd[r][c+1].t==='P')return true; if(at(bd,r,c-1)&&bd[r][c-1].s==='b'&&bd[r][c-1].t==='P')return true; }
+  }
+  return false;
+}
+
+function findKing(bd,s){ for(let r=0;r<10;r++)for(let c=0;c<9;c++){ const p=bd[r][c]; if(p&&p.s===s&&p.t==='K')return[r,c]; } return null; }
+function inCheck(s,bd){ const k=findKing(bd,s); if(!k)return true; return attackedBy(bd,k[0],k[1],opp(s)); }
+
+function clone(bd){ return bd.map(row=>row.map(p=>p?{t:p.t,s:p.s}:null)); }
+
+function legalMoves(bd,s){
+  const res=[];
+  for(let r=0;r<10;r++)for(let c=0;c<9;c++){ const p=bd[r][c]; if(!p||p.s!==s)continue;
+    for(const[nr,nc]of pseudo(bd,r,c)){
+      const nb=clone(bd); nb[nr][nc]=nb[r][c]; nb[r][c]=null;
+      if(!inCheck(s,nb)) res.push([r,c,nr,nc]);
+    } }
+  return res;
+}
+function hasLegalMove(s,bd){ return legalMoves(bd,s).length>0; }
+
+// ---------- 渲染 ----------
+const boardEl=document.getElementById('board');
+const statusEl=document.getElementById('status');
+
+function buildSVG(){
+  let s='<svg viewBox="0 0 9 10" preserveAspectRatio="none">';
+  s+='<rect x="0" y="0" width="9" height="10" fill="none" stroke="#7a5230" stroke-width="0.05"/>';
+  for(let c=0;c<9;c++) s+=`<line x1="${c}" y1="0" x2="${c}" y2="10" stroke="#7a5230" stroke-width="0.03"/>`;
+  for(const y of [0,1,2,3,4,6,7,8,9,10]) s+=`<line x1="0" y1="${y}" x2="9" y2="${y}" stroke="#7a5230" stroke-width="0.03"/>`;
+  // 九宫斜线
+  s+='<line x1="3" y1="0" x2="5" y2="2" stroke="#7a5230" stroke-width="0.03"/>';
+  s+='<line x1="5" y1="0" x2="3" y2="2" stroke="#7a5230" stroke-width="0.03"/>';
+  s+='<line x1="3" y1="7" x2="5" y2="9" stroke="#7a5230" stroke-width="0.03"/>';
+  s+='<line x1="5" y1="7" x2="3" y2="9" stroke="#7a5230" stroke-width="0.03"/>';
+  s+='<text x="2.25" y="4.85" font-size="0.5" fill="#7a5230" text-anchor="middle" font-family="serif">楚 河</text>';
+  s+='<text x="6.75" y="4.85" font-size="0.5" fill="#7a5230" text-anchor="middle" font-family="serif">漢 界</text>';
+  s+='</svg>';
+  return s;
+}
+
+function render(){
+  boardEl.innerHTML=buildSVG();
+  for(let r=0;r<10;r++)for(let c=0;c<9;c++){
+    const p=board[r][c]; if(!p)continue;
+    const d=document.createElement('div');
+    d.className='piece '+(p.s==='r'?'red':'black');
+    if(selected&&selected[0]===r&&selected[1]===c)d.classList.add('sel');
+    if(lastMove&&((lastMove[0]===r&&lastMove[1]===c)||(lastMove[2]===r&&lastMove[3]===c)))d.classList.add('last');
+    d.textContent=CH[p.s][p.t];
+    const x = flipped ? (8-c)+0.5 : c+0.5;
+    const y = flipped ? (9-r)+0.5 : r+0.5;
+    d.style.left=(x/9*100)+'%'; d.style.top=(y/10*100)+'%';
+    d.dataset.r=r; d.dataset.c=c;
+    d.addEventListener('click',()=>onClick(r,c));
+    boardEl.appendChild(d);
+  }
+  updateStatus();
+}
+
+function updateStatus(){
+  if(gameOver){ statusEl.innerHTML=gameOver; return; }
+  const chk=inCheck(turn,board);
+  const who = turn==='r'?'<span class="r">红方</span>':'<span class="b">黑方</span>';
+  statusEl.innerHTML = who + ' 走棋' + (chk?' · ⚠️ 将军！':'');
+}
+
+// ---------- 交互 ----------
+function onClick(r,c){
+  if(gameOver)return;
+  const p=board[r][c];
+  if(selected){
+    const [sr,sc]=selected;
+    if(p&&p.s===turn){ selected=[r,c]; render(); return; }
+    // 是否合法落点
+    const ok=pseudo(board,sr,sc).some(([nr,nc])=>nr===r&&nc===c);
+    if(ok){ doMove(sr,sc,r,c); return; }
+    selected=null; render(); return;
+  }
+  if(p&&p.s===turn){ selected=[r,c]; render(); }
+}
+
+function doMove(sr,sc,nr,nc){
+  const nb=clone(board);
+  nb[nr][nc]=nb[sr][sc]; nb[sr][sc]=null;
+  if(inCheck(turn,nb)){ // 不能送将
+    selected=null; render(); return;
+  }
+  history.push({board:clone(board),turn,lastMove});
+  board=nb; lastMove=[sr,sc,nr,nc]; selected=null;
+  // 切换后判定对方
+  turn=opp(turn);
+  if(inCheck(turn,board)){
+    if(!hasLegalMove(turn,board)){ gameOver = (turn==='r'?'<span class="r">红方</span>':'<span class="b">黑方</span>')+'被将死，'+(opp(turn)==='r'?'<span class="r">红方</span>':'<span class="b">黑方</span>')+'胜！🎉'; }
+  } else if(!hasLegalMove(turn,board)){
+    gameOver = '困毙 · '+(opp(turn)==='r'?'<span class="r">红方</span>':'<span class="b">黑方</span>')+'胜！';
+  }
+  render();
+}
+
+document.getElementById('undo').onclick=()=>{
+  if(!history.length)return;
+  const h=history.pop(); board=h.board; turn=h.turn; lastMove=h.lastMove; gameOver=null; selected=null; render();
+};
+document.getElementById('restart').onclick=()=>{ start(); };
+document.getElementById('flip').onclick=()=>{ flipped=!flipped; render(); };
+
+function start(){
+  board=initBoard(); turn='r'; selected=null; history=[]; lastMove=null; gameOver=null; flipped=false; render();
+}
+start();
+</script>
+</body></html>

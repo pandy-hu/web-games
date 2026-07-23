@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<title>麻将接龙 · Mahjong</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"PingFang SC","Microsoft YaHei",sans-serif;background:#eef0f6;color:#1f2430;display:flex;flex-direction:column;align-items:center;min-height:100vh;-webkit-font-smoothing:antialiased;padding:14px 8px 24px}
+h1{font-size:20px;margin-bottom:4px}
+.bar{display:flex;gap:8px;margin:8px 0 6px;flex-wrap:wrap;justify-content:center}
+button{font:inherit;font-size:14px;font-weight:700;border:none;border-radius:10px;padding:9px 14px;background:#4f46e5;color:#fff;box-shadow:0 2px 6px rgba(79,70,229,.3);cursor:pointer}
+button.sec{background:#fff;color:#4f46e5;box-shadow:0 1px 3px rgba(0,0,0,.08)}
+.info{font-size:13px;color:#7b8190;margin:4px 0 8px;text-align:center}
+.info b{color:#4f46e5}
+.stage{position:relative;background:#0f7a4d;border-radius:14px;box-shadow:0 8px 22px rgba(20,20,40,.14);touch-action:manipulation}
+.tile{position:absolute;display:flex;align-items:center;justify-content:center;border-radius:5px;background:linear-gradient(160deg,#fffefb,#ece4d2);border:1px solid #c9b48a;box-shadow:0 1px 0 #b89d6b,0 2px 3px rgba(0,0,0,.3);font-weight:800;cursor:pointer;user-select:none;transition:transform .08s,box-shadow .08s}
+.tile.free{box-shadow:0 0 0 2px #ffd84d,0 2px 3px rgba(0,0,0,.3)}
+.tile.sel{transform:translateY(-3px);box-shadow:0 0 0 3px #4f46e5,0 4px 6px rgba(0,0,0,.35);z-index:9999!important}
+.tile.gone{visibility:hidden}
+.tile.hint{animation:pulse .6s ease 2}
+@keyframes pulse{0%,100%{box-shadow:0 0 0 2px #ffd84d,0 2px 3px rgba(0,0,0,.3)}50%{box-shadow:0 0 0 4px #ffb020,0 2px 3px rgba(0,0,0,.3)}}
+.hint{color:#9aa0ad;font-size:12px;margin-top:10px;text-align:center;max-width:360px}
+</style>
+</head>
+<body>
+<h1>🀄 麻将接龙 Mahjong</h1>
+<div class="bar">
+  <button class="sec" id="hint">💡 提示</button>
+  <button class="sec" id="shuffle">🔀 洗牌</button>
+  <button class="sec" id="restart">↻ 重开</button>
+</div>
+<div class="info">剩余对子：<b id="left">--</b> · 用时：<b id="time">0:00</b></div>
+<div class="stage" id="stage"></div>
+<div class="hint">点两个相同且「没有被压住、左右至少一侧空着」的麻将即可消除。全部消完即胜。</div>
+
+<script>
+const FACES = ['🀇','🀈','🀉','🀊','🀋','🀌','🀍','🀎','🀏','🀙','🀚','🀛','🀜','🀝','🀞','🀟','🀠','🀡','🀐','🀑','🀒','🀓','🀔','🀕','🀖','🀗','🀘','🀀','🀁','🀂','🀃','🀄','🀅','🀆'];
+
+// ---- 分层布局：每上层比下层偏移 1 个单位（半张牌），形成塔状 ----
+function buildLayout(){
+  const layers=[{cols:8,rows:5},{cols:6,rows:3},{cols:4,rows:1},{cols:2,rows:1}];
+  const pos=[]; let maxC=0,maxR=0;
+  layers.forEach((L,li)=>{
+    const c0=li, r0=li;
+    for(let r=0;r<L.rows;r++)for(let c=0;c<L.cols;c++){
+      const cc=c0+c, rr=r0+r;
+      pos.push({layer:li,c:cc,r:rr});
+      if(cc>maxC)maxC=cc; if(rr>maxR)maxR=rr;
+    }
+  });
+  return {pos,maxC,maxR};
+}
+
+let LAYOUT, N, removed, face, sel, timer, secs, running;
+
+function isCovered(i){
+  const p=LAYOUT.pos[i];
+  for(let j=0;j<N;j++){ if(j===i||removed[j])continue; const q=LAYOUT.pos[j];
+    if(q.layer===p.layer+1 && Math.abs(q.c-p.c)<=1 && Math.abs(q.r-p.r)<=1) return true; }
+  return false;
+}
+function hasNeighbor(i,dir){
+  const p=LAYOUT.pos[i];
+  for(let j=0;j<N;j++){ if(j===i||removed[j])continue; const q=LAYOUT.pos[j];
+    if(q.layer===p.layer && q.r===p.r && q.c===p.c+dir) return true; }
+  return false;
+}
+function isFree(i){ if(removed[i])return false; if(isCovered(i))return false; return !hasNeighbor(i,-1)||!hasNeighbor(i,1); }
+
+// ---- 逆向放置：每步把一对牌放到当前「可消」的空位 → 保证可解 ----
+function generate(){
+  for(let attempt=0;attempt<300;attempt++){
+    removed=new Array(N).fill(false);
+    face=new Array(N).fill(null);
+    let ok=true;
+    for(let k=0;k<N;k+=2){
+      const free=[]; for(let i=0;i<N;i++) if(isFree(i)) free.push(i);
+      if(free.length<2){ ok=false; break; }
+      const a=free[(Math.random()*free.length)|0];
+      let b; do{ b=free[(Math.random()*free.length)|0]; }while(b===a);
+      const f=FACES[(Math.random()*FACES.length)|0];
+      removed[a]=true; removed[b]=true; face[a]=f; face[b]=f;
+    }
+    if(ok){
+      // 还原为「未消除」状态
+      removed=new Array(N).fill(false);
+      return true;
+    }
+  }
+  return false;
+}
+
+function countLeft(){ let n=0; for(let i=0;i<N;i++) if(!removed[i]) n++; return n/2; }
+
+// ---- 渲染 ----
+const stage=document.getElementById('stage');
+let TW, TH;
+function layoutSize(){
+  const avail=Math.min(380, window.innerWidth-20);
+  TW=Math.floor(avail/(LAYOUT.maxC/2+1.5));
+  TH=Math.round(TW*1.28);
+}
+function render(){
+  layoutSize();
+  const w=LAYOUT.maxC*TW/2+TW, h=LAYOUT.maxR*TH/2+TH;
+  stage.style.width=w+'px'; stage.style.height=h+'px';
+  stage.innerHTML='';
+  for(let i=0;i<N;i++){
+    if(removed[i]) continue;
+    const p=LAYOUT.pos[i];
+    const d=document.createElement('div');
+    d.className='tile'+(isFree(i)?' free':'');
+    d.style.width=TW+'px'; d.style.height=TH+'px';
+    d.style.left=(p.c*TW/2)+'px'; d.style.top=(p.r*TH/2)+'px';
+    d.style.zIndex=(p.layer+1)*10;
+    d.style.fontSize=Math.round(TW*0.6)+'px';
+    d.textContent=face[i];
+    if(sel===i) d.classList.add('sel');
+    d.addEventListener('click',()=>onTile(i));
+    stage.appendChild(d);
+  }
+  document.getElementById('left').textContent=countLeft();
+}
+
+function onTile(i){
+  if(running===false) return;
+  if(!isFree(i)) return;
+  if(sel===null){ sel=i; render(); return; }
+  if(sel===i){ sel=null; render(); return; }
+  if(face[sel]===face[i]){
+    removed[sel]=true; removed[i]=true; sel=null;
+    render();
+    if(countLeft()===0){ win(); return; }
+    if(!hasMove()){ document.getElementById('left').textContent='无可消'; autoShuffle(); }
+  } else {
+    sel=i; render();
+  }
+}
+
+function hasMove(){
+  const free=[]; for(let i=0;i<N;i++) if(isFree(i)) free.push(i);
+  for(let a=0;a<free.length;a++)for(let b=a+1;b<free.length;b++)
+    if(face[free[a]]===face[free[b]]) return true;
+  return false;
+}
+
+function autoShuffle(){
+  // 仅在无可行对子时重排剩余牌面（保持每张成对），并保证至少一对可消
+  for(let t=0;t<200;t++){
+    const idx=[]; for(let i=0;i<N;i++) if(!removed[i]) idx.push(i);
+    const faces=idx.map(i=>face[i]);
+    for(let i=faces.length-1;i>0;i--){ const j=(Math.random()*(i+1))|0; [faces[i],faces[j]]=[faces[j],faces[i]]; }
+    idx.forEach((i,k)=>face[i]=faces[k]);
+    if(hasMove()){ break; }
+  }
+  sel=null; render();
+}
+
+function win(){
+  running=false; clearInterval(timer);
+  document.getElementById('left').textContent='🎉 通关！';
+}
+
+function startTimer(){
+  secs=0; running=true;
+  clearInterval(timer);
+  timer=setInterval(()=>{ secs++; const m=(secs/60)|0, s=secs%60; document.getElementById('time').textContent=m+':'+(s<10?'0':'')+s; },1000);
+}
+
+document.getElementById('hint').onclick=()=>{
+  const free=[]; for(let i=0;i<N;i++) if(isFree(i)) free.push(i);
+  for(let a=0;a<free.length;a++)for(let b=a+1;b<free.length;b++){
+    if(face[free[a]]===face[free[b]]){
+      [free[a],free[b]].forEach(idx=>{ const el=[...stage.children].find(e=>e.textContent===face[idx]&&!e.classList.contains('gone')); });
+      // 直接高亮 DOM
+      const els=[...stage.children];
+      const ea=els.find(e=>e.style.left===(LAYOUT.pos[free[a]].c*TW/2)+'px'&&e.style.top===(LAYOUT.pos[free[a]].r*TH/2)+'px');
+      const eb=els.find(e=>e.style.left===(LAYOUT.pos[free[b]].c*TW/2)+'px'&&e.style.top===(LAYOUT.pos[free[b]].r*TH/2)+'px');
+      if(ea)ea.classList.add('hint'); if(eb)eb.classList.add('hint');
+      setTimeout(()=>{if(ea)ea.classList.remove('hint');if(eb)eb.classList.remove('hint');},1300);
+      return;
+    }
+  }
+};
+document.getElementById('shuffle').onclick=()=>{ if(running!==false){ sel=null; autoShuffle(); } };
+document.getElementById('restart').onclick=()=>start();
+window.addEventListener('resize',()=>{ if(running) render(); });
+
+function start(){
+  LAYOUT=buildLayout(); N=LAYOUT.pos.length;
+  if(!generate()){ alert('生成失败，请重试'); return; }
+  sel=null; startTimer(); render();
+}
+start();
+</script>
+</body></html>
