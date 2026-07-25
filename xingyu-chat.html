@@ -42,8 +42,11 @@
   .panel{
     background:rgba(255,255,255,.06); border:1px solid rgba(255,255,255,.12);
     border-radius:16px; padding:10px; backdrop-filter:blur(6px);
+    /* 容器用 relative 让 SDK 内部定位更稳 */
+    position: relative;
   }
-  #chatbot{height:66vh; min-height:420px; border-radius:12px; overflow:hidden;}
+  /* 关键：不要给聊天容器加 overflow:hidden，否则会裁掉输入框 */
+  #chatbot{height:66vh; min-height:420px; border-radius:12px; background:rgba(0,0,0,.18);}
   .tip{font-size:12px; color:#b9a9e0; text-align:center; margin-top:12px; line-height:1.7;}
   footer{text-align:center; font-size:11px; color:#8e80b8; margin-top:14px; line-height:1.7;}
   a{color:var(--gold);}
@@ -76,16 +79,17 @@
   </footer>
 </div>
 
-<!-- ====== 接入 Coze Chat SDK ====== -->
-<script src="https://lf-cdn.coze.cn/obj/unpkg/flow-platform/chat-app-sdk/1.1.0-beta.0/libs/cn/index.js"></script>
+<!-- ====== 接入 Coze Chat SDK（v1.2.0-beta.20，官方最新示例版本） ====== -->
+<script src="https://lf-cdn.coze.cn/obj/unpkg/flow-platform/chat-app-sdk/1.2.0-beta.20/libs/cn/index.js"></script>
 <script>
-  // 👉 bot_id 已填入（来自 Coze 智能体编排页 URL 中 "bot/" 后面的 ID）
+  // bot_id 已填入（来自 Coze 智能体编排页 URL 中 "bot/" 后面的 ID）
   const BOT_ID = '7666428443529756735';
 
   new CozeWebSDK.WebChatClient({
     config: {
+      type: 'bot',          // 集成智能体用 'bot'，集成应用用 'app'
       bot_id: BOT_ID,
-      isIframe: false
+      isIframe: false       // 推荐：聊天框直接集成到网页（共享运行环境）
     },
     // —— 鉴权（可选）——
     // 默认下方不写 auth = 匿名模式（任何人可对话，最适合引流，免配置）。
@@ -97,15 +101,16 @@
     // },
     ui: {
       base: {
-        layout: 'pc',
+        layout: 'pc',       // 'pc' 适配电脑，'mobile' 适配移动，未设自动识别
         lang: 'zh-CN',
         zIndex: 1000
       },
       chatBot: {
         title: '星语小占',
         uploadable: false,
-        el: '#chatbot',
-        width: 480
+        // 关键修复：el 必须是 Element 对象，不能传字符串选择器（之前传 '#chatbot' 是错的）
+        el: document.getElementById('chatbot')
+        // 注意：设置 el 时 chatBot.width 不生效，宽度由容器 CSS 决定
       },
       asstBtn: { isNeed: false },  // 不用右下角悬浮球，直接嵌在容器里
       footer: {
