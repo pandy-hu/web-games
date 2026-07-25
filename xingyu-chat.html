@@ -91,14 +91,14 @@
       bot_id: BOT_ID,
       isIframe: false       // 推荐：聊天框直接集成到网页（共享运行环境）
     },
-    // —— 鉴权（可选）——
-    // 默认下方不写 auth = 匿名模式（任何人可对话，最适合引流，免配置）。
-    // 若担心被刷 Coze 额度，可在 Coze「个人访问令牌」生成 PAT，取消下面注释：
-    // auth: {
-    //   type: 'token',
-    //   token: 'pat_你的令牌',
-    //   onRefreshToken: async () => 'pat_你的令牌'
-    // },
+    // ====== 鉴权：Coze 2026 起强制要求 token（匿名模式已不支持）======
+    // 该 PAT 为个人访问令牌，仅用于本页调试/小范围引流，写在源码里任何人可见；
+    // 正式上线建议改用 OAuth JWT + 后端代理。PAT 过期或想停用，直接在 Coze 后台删除即可立刻断供。
+    auth: {
+      type: 'token',
+      token: 'pat_lJW2jk57rMeqiE8j81RVhMnpsaSXc2nmditxlrD85MlDZ8lOrV3cgPhkezwv4mdu',
+      onRefreshToken: () => 'pat_lJW2jk57rMeqiE8j81RVhMnpsaSXc2nmditxlrD85MlDZ8lOrV3cgPhkezwv4mdu'
+    },
     ui: {
       base: {
         layout: 'pc',       // 'pc' 适配电脑，'mobile' 适配移动，未设自动识别
