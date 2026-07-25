@@ -29,7 +29,7 @@
       radial-gradient(1px 1px at 85% 80%, #fff 50%, transparent),
       radial-gradient(1px 1px at 50% 15%, #fff 50%, transparent);
   }
-  .wrap{position:relative; z-index:1; max-width:520px; margin:0 auto; padding:18px 14px 28px;}
+  .wrap{position:relative; z-index:1; max-width:720px; margin:0 auto; padding:18px 14px 28px;}
   header{text-align:center; padding:10px 0 4px;}
   .logo{font-size:30px;}
   h1{font-size:22px; margin:6px 0 2px; letter-spacing:1px;}
@@ -39,18 +39,38 @@
     background:rgba(232,201,122,.12); border:1px solid rgba(232,201,122,.4);
     color:var(--gold); font-size:13px; text-align:center; line-height:1.6;
   }
+  .login-tip{
+    margin:10px 0; padding:8px 12px; border-radius:10px;
+    background:rgba(150,180,255,.08); border:1px solid rgba(150,180,255,.3);
+    color:#b6c7f5; font-size:12px; text-align:center; line-height:1.6;
+  }
   .panel{
     background:rgba(255,255,255,.06); border:1px solid rgba(255,255,255,.12);
     border-radius:16px; padding:10px; backdrop-filter:blur(6px);
-    /* 容器用 relative 让 SDK 内部定位更稳 */
-    position: relative;
   }
-  /* 关键：不要给聊天容器加 overflow:hidden，否则会裁掉输入框 */
-  #chatbot{height:66vh; min-height:420px; border-radius:12px; background:rgba(0,0,0,.18);}
+  /* iframe 必须给明确高度 */
+  #chatbot-iframe{
+    width:100%; height:70vh; min-height:520px;
+    border:0; border-radius:12px; background:#fff; display:block;
+  }
+  .toolbar{
+    display:flex; gap:10px; justify-content:center; flex-wrap:wrap;
+    margin-top:12px;
+  }
+  .btn{
+    display:inline-block; padding:9px 16px; border-radius:10px; font-size:13px;
+    text-decoration:none; color:var(--bg2); background:var(--gold);
+    border:1px solid var(--gold); transition:.2s;
+  }
+  .btn:hover{background:#f5d893;border-color:#f5d893;}
+  .btn.alt{background:transparent;color:var(--gold);}
+  .btn.alt:hover{background:rgba(232,201,122,.12);}
   .tip{font-size:12px; color:#b9a9e0; text-align:center; margin-top:12px; line-height:1.7;}
   footer{text-align:center; font-size:11px; color:#8e80b8; margin-top:14px; line-height:1.7;}
   a{color:var(--gold);}
-  @media(max-width:480px){#chatbot{height:72vh;}}
+  @media(max-width:480px){
+    #chatbot-iframe{height:75vh; min-height:480px;}
+  }
 </style>
 </head>
 <body>
@@ -67,8 +87,29 @@
     本页内容由 AI 生成，仅供娱乐与自我探索参考，不构成任何人生、投资、医疗或婚恋决策建议。
   </div>
 
+  <div class="login-tip">
+    💡 首次打开会跳到扣子登录页；登录后此页面会自动记住你，刷新即可直接对话。
+  </div>
+
   <div class="panel">
-    <div id="chatbot"></div>
+    <!-- iframe 方式：直接嵌入 Coze 官方 bot 页面，最稳，不依赖任何 SDK -->
+    <iframe
+      id="chatbot-iframe"
+      src="https://www.coze.cn/store/bot/7666428443529756735"
+      allow="microphone; camera; clipboard-read; clipboard-write"
+      referrerpolicy="no-referrer-when-downgrade"
+      loading="lazy"
+      title="星语小占">
+    </iframe>
+  </div>
+
+  <div class="toolbar">
+    <a class="btn" href="https://www.coze.cn/store/bot/7666428443529756735" target="_blank" rel="noopener">
+      🚀 在扣子中打开（备用入口）
+    </a>
+    <a class="btn alt" href="javascript:location.reload()">
+      ↻ 刷新页面
+    </a>
   </div>
 
   <p class="tip">和星语小占聊聊星座、MBTI、九型或今天的心情吧～<br>它只陪你认识自己，绝不替你算命或做决定。</p>
@@ -78,48 +119,5 @@
     不提供任何形式的付费算命 / 改运 / 消灾 / 转运服务。
   </footer>
 </div>
-
-<!-- ====== 接入 Coze Chat SDK（v1.2.0-beta.20，官方最新示例版本） ====== -->
-<script src="https://lf-cdn.coze.cn/obj/unpkg/flow-platform/chat-app-sdk/1.2.0-beta.20/libs/cn/index.js"></script>
-<script>
-  // bot_id 已填入（来自 Coze 智能体编排页 URL 中 "bot/" 后面的 ID）
-  const BOT_ID = '7666428443529756735';
-
-  new CozeWebSDK.WebChatClient({
-    config: {
-      type: 'bot',          // 集成智能体用 'bot'，集成应用用 'app'
-      bot_id: BOT_ID,
-      isIframe: false       // 推荐：聊天框直接集成到网页（共享运行环境）
-    },
-    // ====== 鉴权：Coze 2026 起强制要求 token（匿名模式已不支持）======
-    // 该 PAT 为个人访问令牌，仅用于本页调试/小范围引流，写在源码里任何人可见；
-    // 正式上线建议改用 OAuth JWT + 后端代理。PAT 过期或想停用，直接在 Coze 后台删除即可立刻断供。
-    auth: {
-      type: 'token',
-      token: 'pat_lJW2jk57rMeqiE8j81RVhMnpsaSXc2nmditxlrD85MlDZ8lOrV3cgPhkezwv4mdu',
-      onRefreshToken: () => 'pat_lJW2jk57rMeqiE8j81RVhMnpsaSXc2nmditxlrD85MlDZ8lOrV3cgPhkezwv4mdu'
-    },
-    ui: {
-      base: {
-        layout: 'pc',       // 'pc' 适配电脑，'mobile' 适配移动，未设自动识别
-        lang: 'zh-CN',
-        zIndex: 1000
-      },
-      chatBot: {
-        title: '星语小占',
-        uploadable: false,
-        // 关键修复：el 必须是 Element 对象，不能传字符串选择器（之前传 '#chatbot' 是错的）
-        el: document.getElementById('chatbot')
-        // 注意：设置 el 时 chatBot.width 不生效，宽度由容器 CSS 决定
-      },
-      asstBtn: { isNeed: false },  // 不用右下角悬浮球，直接嵌在容器里
-      footer: {
-        isShow: true,
-        expressionText: '由{{name}}提供 · 仅供娱乐，理性看待',
-        linkvars: { name: { text: '扣子', link: 'https://www.coze.cn/' } }
-      }
-    }
-  });
-</script>
 </body>
 </html>
