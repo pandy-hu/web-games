@@ -1,0 +1,120 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<title>星语小占 · 玄学娱乐助手</title>
+<style>
+  :root{
+    --bg1:#1a1033; --bg2:#0e1430; --gold:#e8c97a; --pink:#e6a8d4; --text:#f3eefb;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif;
+    color:var(--text);
+    background:
+      radial-gradient(1200px 600px at 20% -10%, #3a2466 0%, transparent 60%),
+      radial-gradient(1000px 500px at 90% 0%, #2a3a7a 0%, transparent 55%),
+      linear-gradient(160deg, var(--bg1), var(--bg2));
+    min-height:100vh;
+    background-attachment:fixed;
+  }
+  .stars{
+    position:fixed; inset:0; pointer-events:none; z-index:0; opacity:.5;
+    background-image:
+      radial-gradient(1px 1px at 10% 20%, #fff 50%, transparent),
+      radial-gradient(1px 1px at 30% 70%, #fff 50%, transparent),
+      radial-gradient(1.5px 1.5px at 70% 40%, #ffe 50%, transparent),
+      radial-gradient(1px 1px at 85% 80%, #fff 50%, transparent),
+      radial-gradient(1px 1px at 50% 15%, #fff 50%, transparent);
+  }
+  .wrap{position:relative; z-index:1; max-width:520px; margin:0 auto; padding:18px 14px 28px;}
+  header{text-align:center; padding:10px 0 4px;}
+  .logo{font-size:30px;}
+  h1{font-size:22px; margin:6px 0 2px; letter-spacing:1px;}
+  .sub{font-size:13px; color:#cdbdf0; margin:0;}
+  .disclaimer{
+    margin:14px 0; padding:10px 14px; border-radius:12px;
+    background:rgba(232,201,122,.12); border:1px solid rgba(232,201,122,.4);
+    color:var(--gold); font-size:13px; text-align:center; line-height:1.6;
+  }
+  .panel{
+    background:rgba(255,255,255,.06); border:1px solid rgba(255,255,255,.12);
+    border-radius:16px; padding:10px; backdrop-filter:blur(6px);
+  }
+  #chatbot{height:66vh; min-height:420px; border-radius:12px; overflow:hidden;}
+  .tip{font-size:12px; color:#b9a9e0; text-align:center; margin-top:12px; line-height:1.7;}
+  footer{text-align:center; font-size:11px; color:#8e80b8; margin-top:14px; line-height:1.7;}
+  a{color:var(--gold);}
+  @media(max-width:480px){#chatbot{height:72vh;}}
+</style>
+</head>
+<body>
+<div class="stars"></div>
+<div class="wrap">
+  <header>
+    <div class="logo">🔮✨</div>
+    <h1>星语小占</h1>
+    <p class="sub">玄学娱乐 · 自我探索小助手</p>
+  </header>
+
+  <div class="disclaimer">
+    🌟 仅供娱乐，理性看待，切勿当真。<br>
+    本页内容由 AI 生成，仅供娱乐与自我探索参考，不构成任何人生、投资、医疗或婚恋决策建议。
+  </div>
+
+  <div class="panel">
+    <div id="chatbot"></div>
+  </div>
+
+  <p class="tip">和星语小占聊聊星座、MBTI、九型或今天的心情吧～<br>它只陪你认识自己，绝不替你算命或做决定。</p>
+
+  <footer>
+    🌟 仅供娱乐，理性看待，切勿当真。Powered by 扣子 Coze。<br>
+    不提供任何形式的付费算命 / 改运 / 消灾 / 转运服务。
+  </footer>
+</div>
+
+<!-- ====== 接入 Coze Chat SDK ====== -->
+<script src="https://lf-cdn.coze.cn/obj/unpkg/flow-platform/chat-app-sdk/1.1.0-beta.0/libs/cn/index.js"></script>
+<script>
+  // 👉 bot_id 已填入（来自 Coze 智能体编排页 URL 中 "bot/" 后面的 ID）
+  const BOT_ID = '7666428443529756735';
+
+  new CozeWebSDK.WebChatClient({
+    config: {
+      bot_id: BOT_ID,
+      isIframe: false
+    },
+    // —— 鉴权（可选）——
+    // 默认下方不写 auth = 匿名模式（任何人可对话，最适合引流，免配置）。
+    // 若担心被刷 Coze 额度，可在 Coze「个人访问令牌」生成 PAT，取消下面注释：
+    // auth: {
+    //   type: 'token',
+    //   token: 'pat_你的令牌',
+    //   onRefreshToken: async () => 'pat_你的令牌'
+    // },
+    ui: {
+      base: {
+        layout: 'pc',
+        lang: 'zh-CN',
+        zIndex: 1000
+      },
+      chatBot: {
+        title: '星语小占',
+        uploadable: false,
+        el: '#chatbot',
+        width: 480
+      },
+      asstBtn: { isNeed: false },  // 不用右下角悬浮球，直接嵌在容器里
+      footer: {
+        isShow: true,
+        expressionText: '由{{name}}提供 · 仅供娱乐，理性看待',
+        linkvars: { name: { text: '扣子', link: 'https://www.coze.cn/' } }
+      }
+    }
+  });
+</script>
+</body>
+</html>
