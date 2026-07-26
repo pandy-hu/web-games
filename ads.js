@@ -65,7 +65,7 @@
     var btn = (C.leadBtnURL && C.leadBtnURL !== '#')
       ? '<a class="lead-btn" href="' + C.leadBtnURL + '" target="_blank" rel="noopener">' + (C.leadBtnText || '前往关注') + '</a>'
       : '';
-    bar.innerHTML = '<span class="lead-ico">🎮</span>' + qr +
+    bar.innerHTML = '<span class="lead-ico">🚀</span>' + qr +
       '<div class="lead-txt"><b>' + (C.leadTitle || '更多好玩小游戏 & 福利') + '</b>' +
       '<span>' + (C.leadText || '关注我们，第一时间获取新游戏和独家攻略') + '</span></div>' +
       btn + '<button class="ad-x" aria-label="关闭">✕</button>';
@@ -97,10 +97,10 @@ window.WB_AD = {
   //    例：adTopHTML: '<ins class="adsbygoogle" ...></ins><script>...</script>'
   adTopHTML: '',
 
-  // ② 底部引流条配置
-  leadTitle: '🎮 游戏厅 · 福利社',
-  leadText: '关注公众号，第一时间收到新游戏 & 独家攻略',
-  leadQR: '',                       // 公众号/加群 二维码图片地址（留空则只显示文案）
-  leadBtnText: '前往关注',
-  leadBtnURL: '#'                  // 按钮跳转（公众号主页 / 加群链接 / 落地页等）
+  // ② 底部引流条配置（当前指向免费知识星球，作为引流入口）
+  leadTitle: '🚀 上野的 AI 机会星球',
+  leadText: '每天免费领 AI 搞钱资讯 + 副业信息差',
+  leadQR: '',                       // 星球/加群 二维码图片地址（留空则只显示文案）
+  leadBtnText: '免费进星球',
+  leadBtnURL: 'https://wx.zsxq.com/group/158584248182'  // 知识星球「生活圈」免费入口
 };
