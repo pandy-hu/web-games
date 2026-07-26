@@ -1,15 +1,18 @@
 /* 全局分享/复制链接按钮（WorkBuddy）
  * 点按钮复制当前页面的公网链接，方便玩家分享到微信/QQ。
- * 本地 file:// 打开时，自动拼回 GitHub Pages 公网地址。
+ * 线上访问直接返回当前地址；本地 file:// 打开时，自动拼回腾讯云公网地址。
  */
 (function () {
   'use strict';
+
+  // 站点主域名（部署在腾讯云 CloudBase 静态托管，国内可直连）
+  var SITE_BASE = 'https://shangye-tengxunyun-d6cezf7ba95e3-1357094356.tcloudbaseapp.com/';
 
   function shareUrl() {
     var loc = window.location.href;
     if (loc.indexOf('file://') === 0) {
       var file = window.location.pathname.split('/').pop();
-      return 'https://pandy-hu.github.io/web-games/' + file;
+      return SITE_BASE + file;
     }
     return loc;
   }
